@@ -1,6 +1,6 @@
 # @package _global_
 
-# Test with length 16384, batch size 4, logger sampling_steps [3]
+# Test with length 65536, batch size 4, logger sampling_steps [3]
 
 sampling_rate: 48000
 length: 65536
