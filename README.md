@@ -28,7 +28,7 @@ HUGGINGFACE_TOKEN=hf_NUNySPyUNsmRIb9sUC4FKR2hIeacJOr4Rm
 ```
 
 ## Run Experiments
-Test experimen, see [`exp`](exp/) folder for other experiments, or to create your own
+Run test experiment, see the [`exp`](exp/) folder for other experiments (create your own `.yaml` file there to run a custom experiment!)
 ```bash
 python train.py exp=youtube_test
 ```
