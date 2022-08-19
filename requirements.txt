@@ -1,0 +1,16 @@
+torch
+pytorch-lightning
+python-dotenv
+hydra-core
+hydra-colorlog
+wandb
+auraloss
+yt-dlp
+datasets
+pyloudnorm
+einops
+omegaconf
+rich
+
+audio-diffusion-pytorch
+audio-data-pytorch
