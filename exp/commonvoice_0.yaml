@@ -39,7 +39,7 @@ datamodule:
     _target_: audio_data_pytorch.CommonVoiceDataset
     auth_token: ${oc.env:HUGGINGFACE_TOKEN}
     root: ${data_dir}
-    version: 1
+    version: 8
     languages: ["en"]
     transforms:
       _target_: audio_data_pytorch.AllTransform
