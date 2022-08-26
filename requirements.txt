@@ -11,6 +11,8 @@ pyloudnorm
 einops
 omegaconf
 rich
+plotly
 
 audio-diffusion-pytorch
 audio-data-pytorch
+quantizer-pytorch
