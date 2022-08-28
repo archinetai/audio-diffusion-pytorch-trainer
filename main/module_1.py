@@ -127,7 +127,9 @@ class Model(pl.LightningModule):
         )
 
     def encode(self, x: Tensor) -> Tuple[Tensor, Dict]:
+        print(x.shape)
         x = self.encoder(x)[-1]
+        print(x.shape)
         x, info = self.quantizer(x)
         x = self.post_quantizer(x)
         return x, info
@@ -287,6 +289,9 @@ class SampleLogger(Callback):
 
         context, info = pl_module.encode(x_true)
         indices = info["indices"]
+
+        print(indices.shape)
+
         mask = info["mask"]
         indices_cpu = rearrange(indices, "b c s -> b (c s)").detach().cpu().numpy()
 

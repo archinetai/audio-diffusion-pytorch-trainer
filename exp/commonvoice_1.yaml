@@ -32,8 +32,8 @@ model:
   quantizer_split_size: 8
   quantizer_temperature: 1.0
   quantizer_mask_proba_min: 0.05
-  quantizer_mask_proba_max: 0.95
-  quantizer_mask_proba_rho: 2.0
+  quantizer_mask_proba_max: 1.0
+  quantizer_mask_proba_rho: 1.0
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
@@ -85,8 +85,8 @@ callbacks:
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [3,5,10,25,50,100]
-    num_channels: [4, 16, 32]
+    sampling_steps: [3, 10, 25, 50]
+    num_channels: [32, 64, 128]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0
