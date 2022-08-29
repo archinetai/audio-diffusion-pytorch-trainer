@@ -127,9 +127,7 @@ class Model(pl.LightningModule):
         )
 
     def encode(self, x: Tensor) -> Tuple[Tensor, Dict]:
-        print(x.shape)
         x = self.encoder(x)[-1]
-        print(x.shape)
         x, info = self.quantizer(x)
         x = self.post_quantizer(x)
         return x, info

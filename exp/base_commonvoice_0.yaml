@@ -1,13 +1,11 @@
 # @package _global_
 
-# Test with length 65536, batch size 4, logger sampling_steps [3]
-
 sampling_rate: 48000
-length: 65536
-channels: 2
+length: 262144
+channels: 1
 
 model:
-  _target_: main.module_0.Model
+  _target_: main.module_base.Model
   learning_rate: 1e-4
   beta1: 0.9
   beta2: 0.99
@@ -36,13 +34,13 @@ model:
   diffusion_dynamic_threshold: 0.0
 
 datamodule:
-  _target_: main.module_0.Datamodule
+  _target_: main.module_base.Datamodule
   dataset:
-    _target_: audio_data_pytorch.YoutubeDataset
-    urls:
-      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
+    _target_: audio_data_pytorch.CommonVoiceDataset
+    auth_token: ${oc.env:HUGGINGFACE_TOKEN}
     root: ${data_dir}
-    crop_length: 12 # seconds crops
+    version: 8
+    languages: ["en"]
     transforms:
       _target_: audio_data_pytorch.AllTransform
       source_rate: ${sampling_rate}
@@ -50,7 +48,7 @@ datamodule:
       random_crop_size: ${length}
       loudness: -20
   val_split: 0.01
-  batch_size: 4
+  batch_size: 48
   num_workers: 8
   pin_memory: True
 
@@ -73,13 +71,13 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_0.SampleLogger
+    _target_: main.module_base.SampleLogger
     log_every_n_epoch: 5
     num_items: 4
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [3]
+    sampling_steps: [3,5,10,25,50,100]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0
