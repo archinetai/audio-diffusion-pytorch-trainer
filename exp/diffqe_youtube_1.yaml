@@ -27,7 +27,7 @@ model:
   use_nearest_upsample: False
   use_skip_scale: True
   use_attention_bottleneck: True
-  extract_channels: [0, 0, 0, 16]
+  extract_channels: [0, 0, 0, 32]
   context_channels: [0, 0, 0, 512]
   codebook_size: 1024
   quantizer_groups: 1
