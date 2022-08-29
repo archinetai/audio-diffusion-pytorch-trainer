@@ -158,9 +158,12 @@ class Model(pl.LightningModule):
 
     def forward(self, x: Tensor) -> Tensor:
         batch, length, device = x.shape[0], x.shape[2], x.device
-        assert batch % 2 == 0, "Batch size must be divisible by 2"
-        # First half of batch is source 0, other half source 1
-        s0, s1 = torch.chunk(x, chunks=2, dim=0)
+
+        if batch % 2 == 1:
+            s0, s1 = x, x
+        else:
+            # First half of batch is source 0, other half source 1
+            s0, s1 = torch.chunk(x, chunks=2, dim=0)
         mix = s0 + s1
 
         mode_shape = (batch // 2, 1, length)
