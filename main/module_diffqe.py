@@ -41,6 +41,7 @@ class Model(pl.LightningModule):
         use_skip_scale: bool,
         use_attention_bottleneck: bool,
         extract_channels: List[int],
+        context_channels: List[int],
         codebook_size: int,
         quantizer_groups: int,
         quantizer_split_size: int,
@@ -71,6 +72,7 @@ class Model(pl.LightningModule):
         )
 
         quantizer_channels = extract_channels[-1]
+        post_quantizer_channels = context_channels[-1]
 
         self.quantizer = Quantizer1d(
             channels=quantizer_channels,
@@ -86,18 +88,18 @@ class Model(pl.LightningModule):
         self.post_quantizer = nn.Sequential(
             ResnetBlock1d(
                 in_channels=quantizer_channels,
-                out_channels=quantizer_channels,
+                out_channels=post_quantizer_channels,
                 num_groups=resnet_groups,
             ),
             TransformerBlock1d(
-                channels=quantizer_channels,
+                channels=post_quantizer_channels,
                 num_heads=attention_heads,
                 head_features=attention_features,
                 multiplier=attention_multiplier,
             ),
             ResnetBlock1d(
-                in_channels=quantizer_channels,
-                out_channels=quantizer_channels,
+                in_channels=post_quantizer_channels,
+                out_channels=post_quantizer_channels,
                 num_groups=resnet_groups,
             ),
         )
@@ -123,7 +125,8 @@ class Model(pl.LightningModule):
             diffusion_sigma_distribution=diffusion_sigma_distribution,
             diffusion_sigma_data=diffusion_sigma_data,
             diffusion_dynamic_threshold=diffusion_dynamic_threshold,
-            context_channels=[0, 0] + extract_channels,
+            context_channels=[0, 0]
+            + context_channels,  # Skip in and post patch channels
         )
 
     def encode(self, x: Tensor) -> Tuple[Tensor, Dict]:
@@ -237,7 +240,6 @@ def get_wandb_logger(trainer: Trainer) -> Optional[WandbLogger]:
 class SampleLogger(Callback):
     def __init__(
         self,
-        log_every_n_epoch: int,
         num_items: int,
         channels: int,
         sampling_rate: int,
@@ -247,7 +249,6 @@ class SampleLogger(Callback):
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
     ) -> None:
-        self.log_every_n_epoch = log_every_n_epoch
         self.num_items = num_items
         self.channels = channels
         self.sampling_rate = sampling_rate
@@ -262,17 +263,16 @@ class SampleLogger(Callback):
         self.log_next = False
 
     def on_validation_epoch_start(self, trainer, pl_module):
-        if self.epoch_count % self.log_every_n_epoch == 0:
-            self.log_next = True
-        self.epoch_count += 1
+        self.log_next = True
 
     def on_validation_batch_start(
         self, trainer, pl_module, batch, batch_idx, dataloader_idx
     ):
         if self.log_next:
-            self.log_next = False
             self.log_sample(trainer, pl_module, batch)
+            self.log_next = False
 
+    @torch.no_grad()
     def log_sample(self, trainer, pl_module, batch):
         is_train = pl_module.training
         if is_train:
@@ -287,8 +287,6 @@ class SampleLogger(Callback):
 
         context, info = pl_module.encode(x_true)
         indices = info["indices"]
-
-        print(indices.shape)
 
         mask = info["mask"]
         indices_cpu = rearrange(indices, "b c s -> b (c s)").detach().cpu().numpy()

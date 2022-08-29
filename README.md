@@ -32,19 +32,19 @@ HUGGINGFACE_TOKEN=hf_NUNySPyUNsmRIb9sUC4FKR2hIeacJOr4Rm
 ## Run Experiments
 Run test experiment, see the [`exp`](exp/) folder for other experiments (create your own `.yaml` file there to run a custom experiment!)
 ```bash
-python train.py exp=youtube_test
+python train.py exp=base_test
 ```
 
 Run on GPU(s)
 
 ```bash
-python train.py exp=base_youtube_test trainer.gpus=1
+python train.py exp=base_test trainer.gpus=1
 ```
 
 Resume run from a checkpoint
 
 ```bash
-python train.py exp=base_youtube_test +ckpt=/logs/ckpts/2022-08-17-01-22-18/'last.ckpt'
+python train.py exp=base_test +ckpt=/logs/ckpts/2022-08-17-01-22-18/'last.ckpt'
 ```
 
 ## FAQ

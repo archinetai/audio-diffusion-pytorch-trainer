@@ -3,6 +3,7 @@
 sampling_rate: 22050
 length: 262144
 channels: 1
+log_every_n_steps: 2000
 
 model:
   _target_: main.module_base.Model
@@ -69,7 +70,6 @@ callbacks:
 
   audio_samples_logger:
     _target_: main.module_base.SampleLogger
-    log_every_n_epoch: 5
     num_items: 4
     channels: ${channels}
     sampling_rate: ${sampling_rate}
@@ -103,3 +103,5 @@ trainer:
   max_epochs: -1
   enable_model_summary: False
   log_every_n_steps: 1 # Logs metrics every N batches
+  check_val_every_n_epoch: null
+  val_check_interval: ${log_every_n_steps}

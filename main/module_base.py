@@ -115,7 +115,6 @@ def get_wandb_logger(trainer: Trainer) -> Optional[WandbLogger]:
 class SampleLogger(Callback):
     def __init__(
         self,
-        log_every_n_epoch: int,
         num_items: int,
         channels: int,
         sampling_rate: int,
@@ -124,31 +123,27 @@ class SampleLogger(Callback):
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
     ) -> None:
-        self.log_every_n_epoch = log_every_n_epoch
         self.num_items = num_items
         self.channels = channels
         self.sampling_rate = sampling_rate
         self.length = length
         self.sampling_steps = sampling_steps
-        self.epoch_count = 0
-
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
 
         self.log_next = False
 
     def on_validation_epoch_start(self, trainer, pl_module):
-        if self.epoch_count % self.log_every_n_epoch == 0:
-            self.log_next = True
-        self.epoch_count += 1
+        self.log_next = True
 
     def on_validation_batch_start(
         self, trainer, pl_module, batch, batch_idx, dataloader_idx
     ):
         if self.log_next:
-            self.log_next = False
             self.log_sample(trainer, pl_module, batch)
+            self.log_next = False
 
+    @torch.no_grad()
     def log_sample(self, trainer, pl_module, batch):
         is_train = pl_module.training
         if is_train:
