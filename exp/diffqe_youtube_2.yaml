@@ -30,6 +30,7 @@ model:
   extract_channels: [0, 0, 0, 32]
   context_channels: [0, 0, 0, 512]
   codebook_size: 2048
+  quantizer_type: memcodes
   quantizer_groups: 1
   quantizer_split_size: 8
   quantizer_temperature: 1.0

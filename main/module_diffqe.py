@@ -43,6 +43,8 @@ class Model(pl.LightningModule):
         extract_channels: List[int],
         context_channels: List[int],
         codebook_size: int,
+        quantizer_type: str,
+        quantizer_loss_weight: float,
         quantizer_groups: int,
         quantizer_split_size: int,
         quantizer_temperature: float,
@@ -57,6 +59,8 @@ class Model(pl.LightningModule):
         self.learning_rate = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2
+        self.quantizer_type = quantizer_type
+        self.quantizer_loss_weight = quantizer_loss_weight
 
         self.encoder = Encoder1d(
             in_channels=in_channels,
@@ -78,6 +82,7 @@ class Model(pl.LightningModule):
             channels=quantizer_channels,
             split_size=quantizer_split_size,
             num_groups=quantizer_groups,
+            quantizer_type=quantizer_type,
             codebook_size=codebook_size,
             temperature=quantizer_temperature,
             mask_proba_min=quantizer_mask_proba_min,
@@ -150,6 +155,10 @@ class Model(pl.LightningModule):
         self.log("train_loss", loss)
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"train_perplexity_{i}", perplexity)
+        if self.quantizer_type == "vq":
+            commitment_loss = info["loss"]
+            loss += self.quantizer_loss_weight * commitment_loss
+            self.log("train_commitment_loss", commitment_loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -158,6 +167,10 @@ class Model(pl.LightningModule):
         self.log("valid_loss", loss)
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"valid_perplexity_{i}", perplexity)
+        if self.quantizer_type == "vq":
+            commitment_loss = info["loss"]
+            loss += self.quantizer_loss_weight * commitment_loss
+            self.log("valid_commitment_loss", commitment_loss)
         return loss
 
     def configure_optimizers(self):
