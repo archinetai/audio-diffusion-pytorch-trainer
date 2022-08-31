@@ -1,15 +1,17 @@
 # @package _global_
 
 sampling_rate: 48000
-length: 262144
-channels: 1
+length: 65536
+channels: 2
+upsampler_factor: 8
 log_every_n_steps: 2000
 
 model:
-  _target_: main.module_diffqe.Model
+  _target_: main.module_upsampler.Model
   learning_rate: 1e-4
   beta1: 0.9
   beta2: 0.99
+  factor: ${upsampler_factor}
   in_channels: ${channels}
   channels: 128
   patch_size: 16
@@ -26,17 +28,6 @@ model:
   use_nearest_upsample: False
   use_skip_scale: True
   use_attention_bottleneck: True
-  extract_channels: [0, 0, 0, 32]
-  context_channels: [0, 0, 0, 512]
-  codebook_size: 2048
-  quantizer_type: vq
-  quantizer_loss_weight: 1e-5
-  quantizer_groups: 1
-  quantizer_split_size: 8
-  quantizer_temperature: 1.0
-  quantizer_mask_proba_min: 1.0
-  quantizer_mask_proba_max: 1.0
-  quantizer_mask_proba_rho: 1.0
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
@@ -45,26 +36,11 @@ model:
   diffusion_dynamic_threshold: 0.0
 
 datamodule:
-  _target_: main.module_diffqe.Datamodule
+  _target_: main.module_upsampler.Datamodule
   dataset:
     _target_: audio_data_pytorch.YoutubeDataset
     urls:
-      - https://www.youtube.com/watch?v=F1gIsoIVQG8 # 2h Kiasmos
-      - https://www.youtube.com/watch?v=KjgluLOMa0k # 1h Techno Mix
-      - https://www.youtube.com/watch?v=c_iRx2Un07k # 1h Kygo Piano
-      - https://www.youtube.com/watch?v=fWRISvgAygU # 2h Chillstep
-      - https://www.youtube.com/watch?v=aJoo79OwZEI # 1h Drum and Bass
-      - https://www.youtube.com/watch?v=vnKKNZLVh2Q # 1h French 79
-      - https://www.youtube.com/watch?v=5gcyzjCLH90 # 1h Andrew Langdon
-      - https://www.youtube.com/watch?v=iqzO8cXQGaw # 1h Andrew Langdon
-      - https://www.youtube.com/watch?v=FFfdyV8gnWk # 1h City of Gamers
-      - https://www.youtube.com/watch?v=eqhQwgO03OE # 1h Lofi beats
       - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
-      - https://www.youtube.com/watch?v=W_cu3mS5UU4 # 1h Cyberpunk 2077
-      - https://www.youtube.com/watch?v=0mAzlQwIPQI # 2h Dark Techno
-      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
-      - https://www.youtube.com/watch?v=Et0bFcvSImY # 1.5h Worakls, N'to , Joachim Pastor Mix
-      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
     root: ${data_dir}
     crop_length: 12 # seconds crops
     transforms:
@@ -72,10 +48,9 @@ datamodule:
       source_rate: ${sampling_rate}
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
-      overlap_channels: True
       loudness: -20
   val_split: 0.01
-  batch_size: 32
+  batch_size: 4
   num_workers: 8
   pin_memory: True
 
@@ -98,13 +73,13 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_diffqe.SampleLogger
-    num_items: 2
+    _target_: main.module_upsampler.SampleLogger
+    num_items: 3
+    factor: ${upsampler_factor}
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [3, 10, 25, 50]
-    num_channels: [32]
+    sampling_steps: [3]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0

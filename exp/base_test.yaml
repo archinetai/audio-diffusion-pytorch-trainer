@@ -25,7 +25,6 @@ model:
   attention_heads: 8
   attention_features: 64
   attention_multiplier: 2
-  use_learned_time_embedding: True
   use_nearest_upsample: False
   use_skip_scale: True
   use_attention_bottleneck: True
