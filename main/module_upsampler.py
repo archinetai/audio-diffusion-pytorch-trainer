@@ -225,7 +225,7 @@ class SampleLogger(Callback):
         downsampled_rate = self.sampling_rate // self.factor
         waveforms_downsampled = torchaudio.transforms.Resample(
             orig_freq=self.sampling_rate, new_freq=downsampled_rate
-        )(waveforms)
+        )(waveforms.detach().cpu())
         log_wandb_audio_batch(
             logger=wandb_logger,
             samples=waveforms_downsampled,

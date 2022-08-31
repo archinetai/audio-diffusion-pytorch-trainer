@@ -12,6 +12,7 @@ einops
 omegaconf
 rich
 plotly
+librosa
 
 audio-diffusion-pytorch
 audio-data-pytorch
