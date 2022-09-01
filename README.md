@@ -80,3 +80,24 @@ model = Model.load_from_checkpoint(
 to get only the PyTorch `.pt` checkpoint you can save the internal model weights as `torch.save(model.model.state_dict(), 'torchckpt.pt')`.
 
 </details>
+
+
+<details>
+<summary>Why no checkpoint is created at the end of the epoch?</summary>
+
+If the epoch is shorter than `log_every_n_steps` it doesn't save the checkpoint at the end of the epoch, but after the provided number of steps. If you want to checkpoint more frequently you can add `every_n_train_steps` to the ModelCheckpoint e.g.:
+```yaml
+model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "valid_loss"   # name of the logged metric which determines when model is improving
+    save_top_k: 1           # save k best models (determined by above metric)
+    save_last: True         # additionaly always save model from last epoch
+    mode: "min"             # can be "max" or "min"
+    verbose: False
+    dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
+    filename: '{epoch:02d}-{valid_loss:.3f}'
+    every_n_train_steps: 10
+```
+Note that logging the checkpoint so frequently is not recommended in general, since it takes a bit of time to store the file.
+
+</details>
