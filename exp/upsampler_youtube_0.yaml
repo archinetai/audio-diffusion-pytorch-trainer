@@ -8,9 +8,12 @@ log_every_n_steps: 1000
 
 model:
   _target_: main.module_upsampler.Model
-  learning_rate: 1e-4
-  beta1: 0.9
-  beta2: 0.99
+  lr: 1e-4
+  lr_beta1: 0.9
+  lr_beta2: 0.99
+  scheduler_inv_gamma: 20000.0
+  scheduler_power: 1.0
+  scheduler_warmup: 0.99
   factor: ${upsampler_factor}
   in_channels: ${channels}
   channels: 128
@@ -65,13 +68,17 @@ datamodule:
       random_crop_size: ${length}
       loudness: -20
   val_split: 0.01
-  batch_size: 48
+  batch_size: 4
   num_workers: 8
   pin_memory: True
 
 callbacks:
   rich_progress_bar:
     _target_: pytorch_lightning.callbacks.RichProgressBar
+
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
 
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint
@@ -83,9 +90,14 @@ callbacks:
     dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
 
-  model_summary:
-    _target_: pytorch_lightning.callbacks.RichModelSummary
-    max_depth: 2
+  ema:
+    _target_: main.module_upsampler.EMA
+    decay: 0.9999
+    update_after_n_steps: 1000
+    update_every_n_steps: 10
+
+  learning_rate_monitor:
+    _target_: pytorch_lightning.callbacks.LearningRateMonitor
 
   audio_samples_logger:
     _target_: main.module_upsampler.SampleLogger

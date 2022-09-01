@@ -8,9 +8,12 @@ log_every_n_steps: 1000
 
 model:
   _target_: main.module_upsampler.Model
-  learning_rate: 1e-4
-  beta1: 0.9
-  beta2: 0.99
+  lr: 1e-4
+  lr_beta1: 0.9
+  lr_beta2: 0.99
+  scheduler_inv_gamma: 20000.0
+  scheduler_power: 1.0
+  scheduler_warmup: 0.99
   factor: ${upsampler_factor}
   in_channels: ${channels}
   channels: 128
@@ -58,6 +61,10 @@ callbacks:
   rich_progress_bar:
     _target_: pytorch_lightning.callbacks.RichProgressBar
 
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
+
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint
     monitor: "valid_loss"   # name of the logged metric which determines when model is improving
@@ -68,9 +75,14 @@ callbacks:
     dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
 
-  model_summary:
-    _target_: pytorch_lightning.callbacks.RichModelSummary
-    max_depth: 2
+  ema:
+    _target_: main.module_upsampler.EMA
+    decay: 0.9999
+    update_after_n_steps: 1000
+    update_every_n_steps: 10
+
+  learning_rate_monitor:
+    _target_: pytorch_lightning.callbacks.LearningRateMonitor
 
   audio_samples_logger:
     _target_: main.module_upsampler.SampleLogger
@@ -79,7 +91,7 @@ callbacks:
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [3]
+    sampling_steps: [1,2]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0
