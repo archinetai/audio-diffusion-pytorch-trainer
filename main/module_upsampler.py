@@ -24,8 +24,11 @@ class Model(pl.LightningModule):
     def __init__(
         self,
         lr: float,
+        lr_eps: float,
         lr_beta1: float,
         lr_beta2: float,
+        lr_weight_decay: float,
+        use_scheduler: bool,
         scheduler_inv_gamma: float,
         scheduler_power: float,
         scheduler_warmup: float,
@@ -34,8 +37,11 @@ class Model(pl.LightningModule):
     ):
         super().__init__()
         self.lr = lr
+        self.lr_eps = lr_eps
         self.lr_beta1 = lr_beta1
         self.lr_beta2 = lr_beta2
+        self.lr_weight_decay = lr_weight_decay
+        self.use_scheduler = use_scheduler
         self.scheduler_inv_gamma = scheduler_inv_gamma
         self.scheduler_power = scheduler_power
         self.scheduler_warmup = scheduler_warmup
@@ -46,18 +52,22 @@ class Model(pl.LightningModule):
         return next(self.model.parameters()).device
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             list(self.parameters()),
             lr=self.lr,
             betas=(self.lr_beta1, self.lr_beta2),
+            eps=self.lr_eps,
+            weight_decay=self.lr_weight_decay,
         )
-        scheduler = InverseLR(
-            optimizer=optimizer,
-            inv_gamma=self.scheduler_inv_gamma,
-            power=self.scheduler_power,
-            warmup=self.scheduler_warmup,
-        )
-        return [optimizer], [scheduler]
+        if self.use_scheduler:
+            scheduler = InverseLR(
+                optimizer=optimizer,
+                inv_gamma=self.scheduler_inv_gamma,
+                power=self.scheduler_power,
+                warmup=self.scheduler_warmup,
+            )
+            return [optimizer], [scheduler]
+        return optimizer
 
     def training_step(self, batch, batch_idx):
         waveforms = batch

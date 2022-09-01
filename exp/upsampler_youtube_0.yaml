@@ -9,8 +9,11 @@ log_every_n_steps: 1000
 model:
   _target_: main.module_upsampler.Model
   lr: 1e-4
-  lr_beta1: 0.9
-  lr_beta2: 0.99
+  lr_beta1: 0.95
+  lr_beta2: 0.999
+  lr_eps: 1e-6
+  lr_weight_decay: 1e-3
+  use_scheduler: False
   scheduler_inv_gamma: 20000.0
   scheduler_power: 1.0
   scheduler_warmup: 0.99
@@ -68,7 +71,7 @@ datamodule:
       random_crop_size: ${length}
       loudness: -20
   val_split: 0.01
-  batch_size: 4
+  batch_size: 48
   num_workers: 8
   pin_memory: True
 
@@ -94,7 +97,7 @@ callbacks:
     _target_: main.module_upsampler.EMA
     decay: 0.9999
     update_after_n_steps: 1000
-    update_every_n_steps: 10
+    update_every_n_steps: 1
 
   learning_rate_monitor:
     _target_: pytorch_lightning.callbacks.LearningRateMonitor
