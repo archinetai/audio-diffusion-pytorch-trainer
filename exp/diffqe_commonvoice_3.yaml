@@ -3,11 +3,19 @@
 sampling_rate: 48000
 length: 262144
 channels: 1
-log_every_n_steps: 2000
+log_every_n_steps: 1000
 
 model:
   _target_: main.module_diffqe.Model
-  learning_rate: 1e-4
+  lr: 1e-4
+  lr_beta1: 0.95
+  lr_beta2: 0.999
+  lr_eps: 1e-6
+  lr_weight_decay: 1e-3
+  use_scheduler: False
+  scheduler_inv_gamma: 20000.0
+  scheduler_power: 1.0
+  scheduler_warmup: 0.99
   beta1: 0.9
   beta2: 0.99
   in_channels: ${channels}
@@ -58,7 +66,7 @@ datamodule:
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
       loudness: -20
-  val_split: 0.01
+  val_split: 0.001
   batch_size: 32
   num_workers: 8
   pin_memory: True
