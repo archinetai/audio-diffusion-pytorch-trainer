@@ -32,7 +32,7 @@ model:
   use_nearest_upsample: False
   use_skip_scale: True
   use_attention_bottleneck: True
-  extract_channels: [0, 0, 0, 32]
+  extract_channels: [0, 0, 0, 16]
   context_channels: [0, 0, 0, 512]
   codebook_size: 2048
   quantizer_type: rhvq

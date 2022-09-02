@@ -56,13 +56,13 @@ class Model(pl.LightningModule):
         quantizer_groups: int,
         quantizer_split_size: int,
         quantizer_temperature: float,
-        quantizer_num_residuals: int,
         quantizer_mask_proba_min: float,
         quantizer_mask_proba_max: float,
         quantizer_mask_proba_rho: float,
         diffusion_sigma_distribution: Distribution,
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
+        quantizer_num_residuals: Optional[int] = None,
     ):
         super().__init__()
         self.lr = lr
