@@ -160,7 +160,7 @@ class Model(pl.LightningModule):
         x = self.post_quantizer(x)
         return x, info
 
-    def from_ids(self, indices: LongTensor, mask: Tensor) -> Tensor:
+    def from_ids(self, indices: LongTensor, mask: Optional[Tensor] = None) -> Tensor:
         x = self.quantizer.from_ids(indices, mask)
         x = self.post_quantizer(x)
         return x
@@ -408,41 +408,41 @@ class SampleLogger(Callback):
             (batch, self.channels, self.length), device=pl_module.device
         )
 
-        for channels in self.num_channels:
+        # for channels in self.num_channels:
 
-            # Create mask
-            mask = torch.zeros_like(mask)
-            num_splits = mask.shape[-1]
-            mask[:, :channels, :] = torch.ones(
-                (batch, channels, num_splits), dtype=torch.bool, device=pl_module.device
+        # # Create mask
+        # mask = torch.zeros_like(mask)
+        # num_splits = mask.shape[-1]
+        # mask[:, :channels, :] = torch.ones(
+        #     (batch, channels, num_splits), dtype=torch.bool, device=pl_module.device
+        # )
+
+        # Compute context
+        context = pl_module.from_ids(indices)
+
+        for steps in self.sampling_steps:
+
+            samples = model.sample(
+                noise=noise,
+                sampler=self.diffusion_sampler,
+                sigma_schedule=self.diffusion_schedule,
+                num_steps=steps,
+                context=[context],
             )
-
-            # Compute context
-            context = pl_module.from_ids(indices, mask)
-
-            for steps in self.sampling_steps:
-
-                samples = model.sample(
-                    noise=noise,
-                    sampler=self.diffusion_sampler,
-                    sigma_schedule=self.diffusion_schedule,
-                    num_steps=steps,
-                    context=[context],
-                )
-                log_wandb_audio_batch(
-                    logger=wandb_logger,
-                    id="recon",
-                    samples=samples,
-                    sampling_rate=self.sampling_rate,
-                    caption=f"Sampled in {steps} steps with {channels} channels",
-                )
-                log_wandb_audio_spectrogram(
-                    logger=wandb_logger,
-                    id="recon",
-                    samples=samples,
-                    sampling_rate=self.sampling_rate,
-                    caption=f"Sampled in {steps} steps with {channels} channels",
-                )
+            log_wandb_audio_batch(
+                logger=wandb_logger,
+                id="recon",
+                samples=samples,
+                sampling_rate=self.sampling_rate,
+                caption=f"Sampled in {steps} steps",
+            )
+            log_wandb_audio_spectrogram(
+                logger=wandb_logger,
+                id="recon",
+                samples=samples,
+                sampling_rate=self.sampling_rate,
+                caption=f"Sampled in {steps} steps",
+            )
 
         if is_train:
             pl_module.train()

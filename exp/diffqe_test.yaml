@@ -89,32 +89,32 @@ callbacks:
     _target_: pytorch_lightning.callbacks.RichModelSummary
     max_depth: 2
 
-#   audio_samples_logger:
-#     _target_: main.module_diffqe.SampleLogger
-#     num_items: 2
-#     channels: ${channels}
-#     sampling_rate: ${sampling_rate}
-#     length: ${length}
-#     sampling_steps: [3]
-#     num_channels: [32]
-#     diffusion_sampler:
-#       _target_: audio_diffusion_pytorch.ADPM2Sampler
-#       rho: 1.0
-#     diffusion_schedule:
-#       _target_: audio_diffusion_pytorch.KarrasSchedule
-#       sigma_min: 0.0001
-#       sigma_max: 3.0
-#       rho: 9.0
+  audio_samples_logger:
+    _target_: main.module_diffqe.SampleLogger
+    num_items: 2
+    channels: ${channels}
+    sampling_rate: ${sampling_rate}
+    length: ${length}
+    sampling_steps: [3]
+    num_channels: [16]
+    diffusion_sampler:
+      _target_: audio_diffusion_pytorch.ADPM2Sampler
+      rho: 1.0
+    diffusion_schedule:
+      _target_: audio_diffusion_pytorch.KarrasSchedule
+      sigma_min: 0.0001
+      sigma_max: 3.0
+      rho: 9.0
 
-# loggers:
-#   wandb:
-#     _target_: pytorch_lightning.loggers.wandb.WandbLogger
-#     project: ${oc.env:WANDB_PROJECT}
-#     entity: ${oc.env:WANDB_ENTITY}
-#     # offline: False  # set True to store all logs only locally
-#     job_type: "train"
-#     group: ""
-#     save_dir: ${logs_dir}
+loggers:
+  wandb:
+    _target_: pytorch_lightning.loggers.wandb.WandbLogger
+    project: ${oc.env:WANDB_PROJECT}
+    entity: ${oc.env:WANDB_ENTITY}
+    # offline: False  # set True to store all logs only locally
+    job_type: "train"
+    group: ""
+    save_dir: ${logs_dir}
 
 trainer:
   _target_: pytorch_lightning.Trainer
