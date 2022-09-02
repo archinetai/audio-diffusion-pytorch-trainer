@@ -56,6 +56,7 @@ class Model(pl.LightningModule):
         quantizer_groups: int,
         quantizer_split_size: int,
         quantizer_temperature: float,
+        quantizer_num_residuals: int,
         quantizer_mask_proba_min: float,
         quantizer_mask_proba_max: float,
         quantizer_mask_proba_rho: float,
@@ -91,6 +92,11 @@ class Model(pl.LightningModule):
 
         quantizer_channels = extract_channels[-1]
         post_quantizer_channels = context_channels[-1]
+        extra_args = (
+            {"num_residuals": quantizer_num_residuals}
+            if quantizer_type == "rhvq"
+            else {}
+        )
 
         self.quantizer = Quantizer1d(
             channels=quantizer_channels,
@@ -102,6 +108,7 @@ class Model(pl.LightningModule):
             mask_proba_min=quantizer_mask_proba_min,
             mask_proba_max=quantizer_mask_proba_max,
             mask_proba_rho=quantizer_mask_proba_rho,
+            **extra_args,
         )
 
         self.post_quantizer = nn.Sequential(
