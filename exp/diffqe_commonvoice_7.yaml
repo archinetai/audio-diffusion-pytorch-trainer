@@ -1,6 +1,6 @@
 # @package _global_
 
-sampling_rate: 48000
+sampling_rate: 6000
 length: 262144
 channels: 1
 log_every_n_steps: 1000
@@ -16,8 +16,6 @@ model:
   scheduler_inv_gamma: 20000.0
   scheduler_power: 1.0
   scheduler_warmup: 0.99
-  beta1: 0.9
-  beta2: 0.99
   in_channels: ${channels}
   channels: 128
   patch_size: 16
