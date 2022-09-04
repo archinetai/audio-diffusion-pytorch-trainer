@@ -22,7 +22,7 @@ def main(config: DictConfig) -> None:
 
     # Initialize datamodule
     log.info(f"Instantiating datamodule <{config.datamodule._target_}>.")
-    datamodule = hydra.utils.instantiate(config.datamodule)
+    datamodule = hydra.utils.instantiate(config.datamodule, _convert_="partial")
 
     # Initialize model
     log.info(f"Instantiating model <{config.model._target_}>.")

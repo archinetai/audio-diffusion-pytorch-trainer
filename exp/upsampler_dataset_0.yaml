@@ -53,8 +53,9 @@ datamodule:
       source_rate: 48000
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
+      duplicate_channels: True
       loudness: -20
-  val_split: 0.001
+  val_split: 0.01
   batch_size: 32
   num_workers: 8
   pin_memory: True
