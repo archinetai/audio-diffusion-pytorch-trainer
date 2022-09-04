@@ -1,7 +1,7 @@
 # @package _global_
 
 sampling_rate: 6000
-length: 262144
+length: 32768
 channels: 1
 log_every_n_steps: 1000
 
@@ -33,7 +33,7 @@ model:
   use_nearest_upsample: False
   use_skip_scale: True
   use_attention_bottleneck: True
-  extract_channels: [0, 0, 0, 32]
+  extract_channels: [0, 0, 0, 64]
   context_channels: [0, 0, 0, 512]
   codebook_size: 2048
   quantizer_type: vq
