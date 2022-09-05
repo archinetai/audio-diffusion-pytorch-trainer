@@ -57,9 +57,6 @@ class Model(pl.LightningModule):
         quantizer_loss_weight: float,
         quantizer_groups: int,
         quantizer_split_size: int,
-        quantizer_mask_proba_min: float,
-        quantizer_mask_proba_max: float,
-        quantizer_mask_proba_rho: float,
         diffusion_sigma_distribution: Distribution,
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
@@ -105,9 +102,6 @@ class Model(pl.LightningModule):
             num_groups=quantizer_groups,
             quantizer_type=quantizer_type,
             codebook_size=codebook_size,
-            mask_proba_min=quantizer_mask_proba_min,
-            mask_proba_max=quantizer_mask_proba_max,
-            mask_proba_rho=quantizer_mask_proba_rho,
             **extra_args,
         )
 
@@ -161,8 +155,8 @@ class Model(pl.LightningModule):
         x = self.post_quantizer(x)
         return x, info
 
-    def from_ids(self, indices: LongTensor, mask: Optional[Tensor] = None) -> Tensor:
-        x = self.quantizer.from_ids(indices, mask)
+    def from_ids(self, indices: LongTensor) -> Tensor:
+        x = self.quantizer.from_ids(indices)
         x = self.post_quantizer(x)
         return x
 
@@ -424,8 +418,6 @@ class SampleLogger(Callback):
 
         context, info = pl_module.encode(x_true)
         indices = info["indices"]
-
-        mask = info["mask"]
         indices_cpu = rearrange(indices, "b c s -> b (c s)").detach().cpu().numpy()
 
         # Log indices table
@@ -437,15 +429,6 @@ class SampleLogger(Callback):
         noise = torch.randn(
             (batch, self.channels, self.length), device=pl_module.device
         )
-
-        # for channels in self.num_channels:
-
-        # # Create mask
-        # mask = torch.zeros_like(mask)
-        # num_splits = mask.shape[-1]
-        # mask[:, :channels, :] = torch.ones(
-        #     (batch, channels, num_splits), dtype=torch.bool, device=pl_module.device
-        # )
 
         # Compute context
         context = pl_module.from_ids(indices)
