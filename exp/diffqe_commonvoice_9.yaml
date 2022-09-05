@@ -42,7 +42,7 @@ model:
   extract_channels: ${extract_channels}
   context_channels: [0, 0, 0, 512]
   codebook_size: 2048
-  quantizer_type: rvqe
+  quantizer_type: rvq
   quantizer_num_residuals: ${num_residuals}
   quantizer_loss_weight: 1e-5
   quantizer_groups: 1

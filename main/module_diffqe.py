@@ -92,7 +92,7 @@ class Model(pl.LightningModule):
         post_quantizer_channels = context_channels[-1]
         extra_args = (
             {"num_residuals": quantizer_num_residuals}
-            if quantizer_type == "rvqe"
+            if quantizer_type == "rvq"
             else {}
         )
 
