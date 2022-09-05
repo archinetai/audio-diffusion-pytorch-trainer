@@ -176,7 +176,7 @@ class Model(pl.LightningModule):
         self.log("train_loss", loss)
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"train_perplexity_{i}", perplexity)
-        if self.quantizer_type == "vq":
+        if self.quantizer_type in ["vq", "vqe", "rvqe"]:
             commitment_loss = info["loss"]
             loss += self.quantizer_loss_weight * commitment_loss
             self.log("train_commitment_loss", commitment_loss)
@@ -188,7 +188,7 @@ class Model(pl.LightningModule):
         self.log("valid_loss", loss)
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"valid_perplexity_{i}", perplexity)
-        if self.quantizer_type == "vq":
+        if self.quantizer_type in ["vq", "vqe", "rvqe"]:
             commitment_loss = info["loss"]
             loss += self.quantizer_loss_weight * commitment_loss
             self.log("valid_commitment_loss", commitment_loss)
