@@ -57,6 +57,7 @@ class Model(pl.LightningModule):
         quantizer_loss_weight: float,
         quantizer_groups: int,
         quantizer_split_size: int,
+        quantizer_expire_threshold: int,
         diffusion_sigma_distribution: Distribution,
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
@@ -102,6 +103,7 @@ class Model(pl.LightningModule):
             num_groups=quantizer_groups,
             quantizer_type=quantizer_type,
             codebook_size=codebook_size,
+            expire_threshold=quantizer_expire_threshold,
             **extra_args,
         )
 

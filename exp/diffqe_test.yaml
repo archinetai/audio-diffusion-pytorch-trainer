@@ -47,6 +47,7 @@ model:
   quantizer_loss_weight: 1e-5
   quantizer_groups: 1
   quantizer_split_size: ${split_size}
+  quantizer_expire_threshold: 2
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
