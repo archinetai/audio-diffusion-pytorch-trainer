@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import librosa
@@ -56,14 +57,13 @@ class Model(pl.LightningModule):
         quantizer_loss_weight: float,
         quantizer_groups: int,
         quantizer_split_size: int,
-        quantizer_temperature: float,
         quantizer_mask_proba_min: float,
         quantizer_mask_proba_max: float,
         quantizer_mask_proba_rho: float,
         diffusion_sigma_distribution: Distribution,
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
-        quantizer_num_residuals: Optional[int] = None,
+        quantizer_num_residuals: int = 1,
     ):
         super().__init__()
         self.lr = lr
@@ -95,7 +95,7 @@ class Model(pl.LightningModule):
         post_quantizer_channels = context_channels[-1]
         extra_args = (
             {"num_residuals": quantizer_num_residuals}
-            if quantizer_type == "rhvq"
+            if quantizer_type == "rvqe"
             else {}
         )
 
@@ -105,7 +105,6 @@ class Model(pl.LightningModule):
             num_groups=quantizer_groups,
             quantizer_type=quantizer_type,
             codebook_size=codebook_size,
-            temperature=quantizer_temperature,
             mask_proba_min=quantizer_mask_proba_min,
             mask_proba_max=quantizer_mask_proba_max,
             mask_proba_rho=quantizer_mask_proba_rho,
@@ -334,6 +333,37 @@ def log_wandb_audio_spectrogram(
     )
 
 
+class QuantizationInfoLogger(Callback):
+    def __init__(
+        self,
+        sample_rate: int,
+        patch_size: int,
+        split_size: int,
+        num_residuals: int,
+        downsample_factors: List[int],
+        extract_channels: List[int],
+    ):
+        encoder_depth = len(extract_channels)
+        downsample_factors = downsample_factors[0:encoder_depth]
+        encoder_downsample = reduce((lambda x, y: x * y), downsample_factors)
+        downsample_factor = patch_size * encoder_downsample * split_size
+
+        splits_per_second = sample_rate / downsample_factor
+        self.splits_per_second = splits_per_second
+
+        tokens_per_second = splits_per_second * extract_channels[-1] * num_residuals
+        self.tokens_per_second = tokens_per_second
+
+    def on_train_start(self, trainer, pl_module):
+        logger = get_wandb_logger(trainer)
+        logger.log_hyperparams(
+            {
+                "splits_per_second": self.splits_per_second,
+                "tokens_per_second": self.tokens_per_second,
+            }
+        )
+
+
 class SampleLogger(Callback):
     def __init__(
         self,
@@ -342,7 +372,6 @@ class SampleLogger(Callback):
         sampling_rate: int,
         length: int,
         sampling_steps: List[int],
-        num_channels: List[int],
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
     ) -> None:
@@ -351,7 +380,6 @@ class SampleLogger(Callback):
         self.sampling_rate = sampling_rate
         self.length = length
         self.sampling_steps = sampling_steps
-        self.num_channels = num_channels
         self.epoch_count = 0
 
         self.diffusion_schedule = diffusion_schedule
