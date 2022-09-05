@@ -70,7 +70,7 @@ datamodule:
       overlap_channels: True
       random_crop_size: ${length}
       loudness: -20
-  val_split: 0.01
+  val_split: 0.001
   batch_size: 4
   num_workers: 8
   pin_memory: True
