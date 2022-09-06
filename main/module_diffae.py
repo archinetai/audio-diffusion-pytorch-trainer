@@ -150,12 +150,12 @@ class Model(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
+        optimizer = torch.optim.Adam(
             list(self.parameters()),
             lr=self.lr,
             betas=(self.lr_beta1, self.lr_beta2),
             eps=self.lr_eps,
-            weight_decay=self.lr_weight_decay,
+            # weight_decay=self.lr_weight_decay,
         )
         if self.use_scheduler:
             scheduler = InverseLR(
