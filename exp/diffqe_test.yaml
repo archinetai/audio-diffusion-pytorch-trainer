@@ -5,7 +5,7 @@ length: 32768
 channels: 1
 patch_size: 16
 factors: [4, 4, 4, 2, 2, 2]
-extract_channels: [0, 0, 64]
+extract_channels: [0, 0, 0, 16]
 split_size: 16
 num_residuals: 1
 log_every_n_steps: 1000
@@ -39,7 +39,7 @@ model:
   use_skip_scale: True
   use_attention_bottleneck: True
   extract_channels: ${extract_channels}
-  context_channels: [0, 0, 512]
+  context_channels: [0, 0, 0, 512]
   codebook_size: 2048
   quantizer_type: vq
   quantizer_num_residuals: ${num_residuals}
@@ -92,40 +92,40 @@ callbacks:
     _target_: pytorch_lightning.callbacks.RichModelSummary
     max_depth: 2
 
-  audio_samples_logger:
-    _target_: main.module_diffqe.SampleLogger
-    num_items: 2
-    channels: ${channels}
-    sampling_rate: ${sampling_rate}
-    length: ${length}
-    sampling_steps: [3]
-    diffusion_sampler:
-      _target_: audio_diffusion_pytorch.ADPM2Sampler
-      rho: 1.0
-    diffusion_schedule:
-      _target_: audio_diffusion_pytorch.KarrasSchedule
-      sigma_min: 0.0001
-      sigma_max: 3.0
-      rho: 9.0
+#   audio_samples_logger:
+#     _target_: main.module_diffqe.SampleLogger
+#     num_items: 2
+#     channels: ${channels}
+#     sampling_rate: ${sampling_rate}
+#     length: ${length}
+#     sampling_steps: [3]
+#     diffusion_sampler:
+#       _target_: audio_diffusion_pytorch.ADPM2Sampler
+#       rho: 1.0
+#     diffusion_schedule:
+#       _target_: audio_diffusion_pytorch.KarrasSchedule
+#       sigma_min: 0.0001
+#       sigma_max: 3.0
+#       rho: 9.0
 
-  quantization_info:
-    _target_: main.module_diffqe.QuantizationInfoLogger
-    sample_rate: ${sampling_rate}
-    patch_size: ${patch_size}
-    split_size: ${split_size}
-    num_residuals: ${num_residuals}
-    downsample_factors: ${factors}
-    extract_channels: ${extract_channels}
+#   quantization_info:
+#     _target_: main.module_diffqe.QuantizationInfoLogger
+#     sample_rate: ${sampling_rate}
+#     patch_size: ${patch_size}
+#     split_size: ${split_size}
+#     num_residuals: ${num_residuals}
+#     downsample_factors: ${factors}
+#     extract_channels: ${extract_channels}
 
-loggers:
-  wandb:
-    _target_: pytorch_lightning.loggers.wandb.WandbLogger
-    project: ${oc.env:WANDB_PROJECT}
-    entity: ${oc.env:WANDB_ENTITY}
-    # offline: False  # set True to store all logs only locally
-    job_type: "train"
-    group: ""
-    save_dir: ${logs_dir}
+# loggers:
+#   wandb:
+#     _target_: pytorch_lightning.loggers.wandb.WandbLogger
+#     project: ${oc.env:WANDB_PROJECT}
+#     entity: ${oc.env:WANDB_ENTITY}
+#     # offline: False  # set True to store all logs only locally
+#     job_type: "train"
+#     group: ""
+#     save_dir: ${logs_dir}
 
 trainer:
   _target_: pytorch_lightning.Trainer

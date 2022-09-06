@@ -145,8 +145,7 @@ class Model(pl.LightningModule):
             diffusion_sigma_distribution=diffusion_sigma_distribution,
             diffusion_sigma_data=diffusion_sigma_data,
             diffusion_dynamic_threshold=diffusion_dynamic_threshold,
-            context_channels=[0, 0]
-            + context_channels,  # Skip in and post patch channels
+            context_channels=[0] + context_channels,
         )
 
     def encode(self, x: Tensor) -> Tuple[Tensor, Dict]:
