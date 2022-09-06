@@ -12,7 +12,7 @@ log_every_n_steps: 1000
 
 
 model:
-  _target_: main.module_diffae.Model
+  _target_: main.module_diffqe.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
@@ -40,6 +40,13 @@ model:
   use_attention_bottleneck: True
   extract_channels: ${extract_channels}
   context_channels: [0, 0, 0, 512]
+  codebook_size: 2048
+  quantizer_type: vq
+  quantizer_num_residuals: ${num_residuals}
+  quantizer_loss_weight: 1e-5
+  quantizer_groups: 1
+  quantizer_split_size: ${split_size}
+  quantizer_expire_threshold: 2
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
@@ -48,7 +55,7 @@ model:
   diffusion_dynamic_threshold: 0.0
 
 datamodule:
-  _target_: main.module_diffae.Datamodule
+  _target_: main.module_diffqe.Datamodule
   dataset:
     _target_: audio_data_pytorch.CommonVoiceDataset
     auth_token: ${oc.env:HUGGINGFACE_TOKEN}
@@ -62,7 +69,7 @@ datamodule:
       random_crop_size: ${length}
       #loudness: -20
   val_split: 0.001
-  batch_size: 64
+  batch_size: 32
   num_workers: 8
   pin_memory: True
 
@@ -85,7 +92,7 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_diffae.SampleLogger
+    _target_: main.module_diffqe.SampleLogger
     num_items: 2
     channels: ${channels}
     sampling_rate: ${sampling_rate}

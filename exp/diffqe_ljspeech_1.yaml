@@ -51,7 +51,7 @@ model:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
     std: 1.0
-  diffusion_sigma_data: 0.2
+  diffusion_sigma_data: 0.1
   diffusion_dynamic_threshold: 0.0
 
 datamodule:
@@ -64,7 +64,7 @@ datamodule:
       source_rate: 22050
       target_rate: ${sampling_rate}
       crop_size: ${length}
-      loudness: -20
+      #loudness: -20
   val_split: 0.01
   batch_size: 32
   num_workers: 8
