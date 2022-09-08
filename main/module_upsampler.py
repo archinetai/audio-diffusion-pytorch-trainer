@@ -268,15 +268,14 @@ class SampleLogger(Callback):
         factor = random.choice(self.factors)
         downsampled_rate = self.sampling_rate // factor
         waveforms_downsampled = waveforms[:, :, ::factor]
-        # We log a interleaved version since the player doesn't support low Hz rates
-        waveforms_interleaved = torch.repeat_interleave(
-            waveforms_downsampled, repeats=int(factor), dim=2
-        )
+        # We log an upsampled version since the player doesn't support low Hz rates
+        upsampler = torchaudio.transforms.Resample(downsampled_rate, self.sampling_rate)
+        waveforms_reupsampled = upsampler(waveforms_downsampled)
         log_wandb_audio_batch(
             logger=wandb_logger,
             id="downsampled",
-            samples=waveforms_interleaved,
-            sampling_rate=downsampled_rate,
+            samples=waveforms_reupsampled,
+            sampling_rate=self.sampling_rate,
             caption=f"Sample rate {downsampled_rate}",
         )
 
