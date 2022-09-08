@@ -270,7 +270,7 @@ class SampleLogger(Callback):
         waveforms_downsampled = waveforms[:, :, ::factor]
         # We log an upsampled version since the player doesn't support low Hz rates
         upsampler = torchaudio.transforms.Resample(downsampled_rate, self.sampling_rate)
-        waveforms_reupsampled = upsampler(waveforms_downsampled)
+        waveforms_reupsampled = upsampler(waveforms_downsampled.cpu())
         log_wandb_audio_batch(
             logger=wandb_logger,
             id="downsampled",
