@@ -5,7 +5,7 @@ length: 32768
 channels: 1
 patch_size: 16
 factors: [4, 4, 4, 2, 2, 2]
-extract_channels: [0, 0, 0, 32]
+extract_channels: [0, 0, 0, 64]
 split_size: 8
 num_residuals: 1
 log_every_n_steps: 1000
