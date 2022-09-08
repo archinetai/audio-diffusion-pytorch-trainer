@@ -26,7 +26,7 @@ def main(config: DictConfig) -> None:
 
     # Initialize model
     log.info(f"Instantiating model <{config.model._target_}>.")
-    model = hydra.utils.instantiate(config.model)
+    model = hydra.utils.instantiate(config.model, _convert_="partial")
 
     # Initialize all callbacks (e.g. checkpoints, early stopping)
     callbacks = []
@@ -34,7 +34,7 @@ def main(config: DictConfig) -> None:
         for _, cb_conf in config["callbacks"].items():
             if "_target_" in cb_conf:
                 log.info(f"Instantiating callback <{cb_conf._target_}>.")
-                callbacks.append(hydra.utils.instantiate(cb_conf))
+                callbacks.append(hydra.utils.instantiate(cb_conf, _convert_="partial"))
 
     # Initialize loggers (e.g. wandb)
     loggers = []
@@ -43,7 +43,9 @@ def main(config: DictConfig) -> None:
             if "_target_" in lg_conf:
                 log.info(f"Instantiating logger <{lg_conf._target_}>.")
                 # Sometimes wandb throws error if slow connection...
-                logger = utils.retry_if_error(lambda: hydra.utils.instantiate(lg_conf))
+                logger = utils.retry_if_error(
+                    lambda: hydra.utils.instantiate(lg_conf, _convert_="partial")
+                )
                 loggers.append(logger)
 
     # Initialize trainer

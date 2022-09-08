@@ -1,6 +1,7 @@
+import random
 import warnings
 from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import librosa
 import plotly.graph_objs as go
@@ -198,11 +199,19 @@ def log_wandb_audio_spectrogram(
     )
 
 
+def to_list(val):
+    if isinstance(val, tuple):
+        return list(val)
+    if isinstance(val, list):
+        return val
+    return [val]
+
+
 class SampleLogger(Callback):
     def __init__(
         self,
         num_items: int,
-        factor: int,
+        factor: Union[int, Sequence[int]],
         channels: int,
         sampling_rate: int,
         length: int,
@@ -211,7 +220,7 @@ class SampleLogger(Callback):
         diffusion_sampler: Sampler,
     ) -> None:
         self.num_items = num_items
-        self.factor = factor
+        self.factors = to_list(factor)
         self.channels = channels
         self.sampling_rate = sampling_rate
         self.length = length
@@ -255,20 +264,27 @@ class SampleLogger(Callback):
             sampling_rate=self.sampling_rate,
         )
 
-        # Log downsampled waveforms
-        downsampled_rate = self.sampling_rate // self.factor
-        waveforms_downsampled = waveforms[:, :, :: self.factor]
+        # Compute and log downsampled waveforms
+        factor = random.choice(self.factors)
+        downsampled_rate = self.sampling_rate // factor
+        waveforms_downsampled = waveforms[:, :, ::factor]
+        # We log a interleaved version since the player doesn't support low Hz rates
+        waveforms_interleaved = torch.repeat_interleave(
+            waveforms_downsampled, repeats=int(factor), dim=2
+        )
         log_wandb_audio_batch(
             logger=wandb_logger,
             id="downsampled",
-            samples=waveforms_downsampled,
+            samples=waveforms_interleaved,
             sampling_rate=downsampled_rate,
+            caption=f"Sample rate {downsampled_rate}",
         )
 
         # Log upsampled waveforms at different steps
         for steps in self.sampling_steps:
             samples = model.sample(
-                start=waveforms_downsampled,
+                waveforms_downsampled,
+                factor=factor,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,
@@ -278,14 +294,14 @@ class SampleLogger(Callback):
                 id="upsampled",
                 samples=samples,
                 sampling_rate=self.sampling_rate,
-                caption=f"Sampled in {steps} steps",
+                caption=f"Sampled in {steps} steps from {downsampled_rate} Hz",
             )
             log_wandb_audio_spectrogram(
                 logger=wandb_logger,
                 id="upsampled",
                 samples=samples,
                 sampling_rate=self.sampling_rate,
-                caption=f"Sampled in {steps} steps",
+                caption=f"Sampled in {steps} steps from {downsampled_rate} Hz",
             )
 
         if is_train:
