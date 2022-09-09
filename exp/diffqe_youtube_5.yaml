@@ -4,7 +4,7 @@ sampling_rate: 12000
 length: 262144
 log_every_n_steps: 1000
 
-channels: 1
+channels: 2
 patch_size: 16
 factors: [4, 4, 4, 2, 2, 2]
 extract_channels: [0, 0, 0, 32]
