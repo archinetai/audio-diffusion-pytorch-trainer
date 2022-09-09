@@ -50,7 +50,7 @@ datamodule:
     transforms:
       _target_: audio_data_pytorch.AllTransform
       random_crop_size: ${length}
-      use_stereo: True
+      stereo: True
   val_split: 0.01
   batch_size: 32
   num_workers: 8
