@@ -174,24 +174,27 @@ class Model(pl.LightningModule):
         waveforms = batch
         loss, info = self(waveforms)
         self.log("train_loss", loss)
+        # Log perplexity of each codebook used
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"train_perplexity_{i}", perplexity)
-        if self.quantizer_type in ["vq", "rvq"]:
-            commitment_loss = info["loss"]
-            loss += self.quantizer_loss_weight * commitment_loss
-            self.log("train_commitment_loss", commitment_loss)
+        # Log commitment loss
+        commitment_loss = info["loss"]
+        loss += self.quantizer_loss_weight * commitment_loss
+        self.log("train_commitment_loss", commitment_loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         waveforms = batch
         loss, info = self(waveforms)
         self.log("valid_loss", loss)
+
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"valid_perplexity_{i}", perplexity)
-        if self.quantizer_type in ["vq", "rvq"]:
-            commitment_loss = info["loss"]
-            loss += self.quantizer_loss_weight * commitment_loss
-            self.log("valid_commitment_loss", commitment_loss)
+
+        commitment_loss = info["loss"]
+        loss += self.quantizer_loss_weight * commitment_loss
+        self.log("valid_commitment_loss", commitment_loss)
+
         return loss
 
     def configure_optimizers(self):
