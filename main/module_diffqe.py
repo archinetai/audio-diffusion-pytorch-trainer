@@ -431,8 +431,6 @@ class SampleLogger(Callback):
         # Encode x_true to get indices
         x_true = batch[0 : self.num_items]
 
-        print("a", x_true.shape)
-
         log_wandb_audio_batch(
             logger=wandb_logger,
             id="true",
@@ -462,8 +460,6 @@ class SampleLogger(Callback):
 
         # Compute context
         context = pl_module.from_ids(indices)
-
-        print("c", context.shape)
 
         for steps in self.sampling_steps:
 
