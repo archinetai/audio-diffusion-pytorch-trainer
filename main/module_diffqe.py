@@ -55,7 +55,8 @@ class Model(pl.LightningModule):
         quantizer_type: str,
         quantizer_loss_weight: float,
         quantizer_groups: int,
-        quantizer_expire_threshold: int,
+        quantizer_expire_threshold: float,
+        quantizer_shared_codebook: bool,
         diffusion_sigma_distribution: Distribution,
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
@@ -98,6 +99,7 @@ class Model(pl.LightningModule):
                 codebook_size=codebook_size,
                 expire_threshold=quantizer_expire_threshold,
                 num_residuals=quantizer_num_residuals,
+                shared_codebook=quantizer_shared_codebook,
             )
         elif self.quantizer_type == "channelwise":
             assert_message = "quantizer_split_size required with channelwise type"
@@ -109,6 +111,7 @@ class Model(pl.LightningModule):
                 codebook_size=codebook_size,
                 expire_threshold=quantizer_expire_threshold,
                 num_residuals=quantizer_num_residuals,
+                shared_codebook=quantizer_shared_codebook,
             )
         else:
             raise ValueError("Quantizer type must be timewise or channelwise")
