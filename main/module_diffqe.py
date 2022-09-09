@@ -14,7 +14,7 @@ from audio_diffusion_pytorch.modules import ResnetBlock1d, TransformerBlock1d
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
-from quantizer_pytorch import Quantizer1d
+from quantizer_pytorch import Quantizer1d, QuantizerChannelwise1d
 from torch import LongTensor, Tensor, nn
 from torch.utils.data import DataLoader
 
@@ -55,12 +55,12 @@ class Model(pl.LightningModule):
         quantizer_type: str,
         quantizer_loss_weight: float,
         quantizer_groups: int,
-        quantizer_split_size: int,
         quantizer_expire_threshold: int,
         diffusion_sigma_distribution: Distribution,
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
         quantizer_num_residuals: int = 1,
+        quantizer_split_size: Optional[int] = None,
     ):
         super().__init__()
         self.lr = lr
@@ -90,21 +90,28 @@ class Model(pl.LightningModule):
 
         quantizer_channels = extract_channels[-1]
         post_quantizer_channels = context_channels[-1]
-        extra_args = (
-            {"num_residuals": quantizer_num_residuals}
-            if quantizer_type == "rvq"
-            else {}
-        )
 
-        self.quantizer = Quantizer1d(
-            channels=quantizer_channels,
-            split_size=quantizer_split_size,
-            num_groups=quantizer_groups,
-            quantizer_type=quantizer_type,
-            codebook_size=codebook_size,
-            expire_threshold=quantizer_expire_threshold,
-            **extra_args,
-        )
+        if self.quantizer_type == "timewise":
+            self.quantizer = Quantizer1d(
+                channels=quantizer_channels,
+                num_groups=quantizer_groups,
+                codebook_size=codebook_size,
+                expire_threshold=quantizer_expire_threshold,
+                num_residuals=quantizer_num_residuals,
+            )
+        elif self.quantizer_type == "channelwise":
+            assert_message = "quantizer_split_size required with channelwise type"
+            assert quantizer_split_size is not None, assert_message
+            self.quantizer = QuantizerChannelwise1d(
+                channels=quantizer_channels,
+                split_size=quantizer_split_size,
+                num_groups=quantizer_groups,
+                codebook_size=codebook_size,
+                expire_threshold=quantizer_expire_threshold,
+                num_residuals=quantizer_num_residuals,
+            )
+        else:
+            raise ValueError("Quantizer type must be timewise or channelwise")
 
         self.post_quantizer = nn.Sequential(
             ResnetBlock1d(
@@ -333,28 +340,50 @@ class QuantizationInfoLogger(Callback):
         patch_size: int,
         split_size: int,
         num_residuals: int,
+        num_groups: int,
+        quantizer_type: str,
         downsample_factors: List[int],
         extract_channels: List[int],
     ):
         encoder_depth = len(extract_channels)
         downsample_factors = downsample_factors[0:encoder_depth]
         encoder_downsample = reduce((lambda x, y: x * y), downsample_factors)
-        downsample_factor = patch_size * encoder_downsample * split_size
+        downsample_factor = patch_size * encoder_downsample
+        channels = extract_channels[-1]
 
-        splits_per_second = sample_rate / downsample_factor
-        self.splits_per_second = splits_per_second
+        self.quantizer_type = quantizer_type
+        self.tokens_per_second = 0.0
 
-        tokens_per_second = splits_per_second * extract_channels[-1] * num_residuals
-        self.tokens_per_second = tokens_per_second
+        self.splits_per_second = 0.0
+        if quantizer_type == "channelwise":
+            splits_per_second = sample_rate / (downsample_factor * split_size)
+            self.splits_per_second = splits_per_second
+            self.tokens_per_second = splits_per_second * channels * num_residuals
+
+        self.ticks_per_second = 0.0
+        if quantizer_type == "timewise":
+            ticks_per_second = sample_rate / downsample_factor
+            self.ticks_per_second = ticks_per_second
+            self.tokens_per_second = (
+                ticks_per_second * channels * num_residuals * num_groups
+            )
 
     def on_train_start(self, trainer, pl_module):
         logger = get_wandb_logger(trainer)
-        logger.log_hyperparams(
-            {
-                "splits_per_second": self.splits_per_second,
-                "tokens_per_second": self.tokens_per_second,
-            }
-        )
+        if self.quantizer_type == "timewise":
+            logger.log_hyperparams(
+                {
+                    "ticks_per_second": self.ticks_per_second,
+                    "tokens_per_second": self.tokens_per_second,
+                }
+            )
+        else:
+            logger.log_hyperparams(
+                {
+                    "splits_per_second": self.splits_per_second,
+                    "tokens_per_second": self.tokens_per_second,
+                }
+            )
 
 
 class SampleLogger(Callback):
@@ -417,7 +446,7 @@ class SampleLogger(Callback):
 
         context, info = pl_module.encode(x_true)
         indices = info["indices"]
-        indices_cpu = rearrange(indices, "b c s -> b (c s)").detach().cpu().numpy()
+        indices_cpu = rearrange(indices, "b ... -> b (...)").detach().cpu().numpy()
 
         # Log indices table
         table = go.Figure(data=[go.Table(cells=dict(values=indices_cpu))])

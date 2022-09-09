@@ -2,14 +2,17 @@
 
 sampling_rate: 12000
 length: 262144
-channels: 2
-patch_size: 16
-factors: [4, 4, 4, 2, 2, 2]
-extract_channels: [0, 0, 0, 64]
-split_size: 4
-num_residuals: 2
 log_every_n_steps: 1000
 
+channels: 1
+patch_size: 16
+factors: [4, 4, 4, 2, 2, 2]
+extract_channels: [0, 0, 0, 32]
+quantizer_type: timewise
+quantizer_split_size: null
+quantizer_num_residuals: 4
+quantizer_num_groups: 1
+quantizer_codebook_size: 2048
 
 model:
   _target_: main.module_diffqe.Model
@@ -40,12 +43,12 @@ model:
   use_attention_bottleneck: True
   extract_channels: ${extract_channels}
   context_channels: [0, 0, 0, 512]
-  codebook_size: 2048
-  quantizer_type: rvq
-  quantizer_num_residuals: ${num_residuals}
+  codebook_size: ${quantizer_codebook_size}
+  quantizer_type: ${quantizer_type}
+  quantizer_num_residuals: ${quantizer_num_residuals}
   quantizer_loss_weight: 1e-5
-  quantizer_groups: 1
-  quantizer_split_size: ${split_size}
+  quantizer_groups: ${quantizer_num_groups}
+  quantizer_split_size: ${quantizer_split_size}
   quantizer_expire_threshold: 2
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
@@ -111,7 +114,7 @@ datamodule:
       source_rate: 48000
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
-  val_split: 0.01
+  val_split: 0.001
   batch_size: 32
   num_workers: 8
   pin_memory: True
@@ -154,10 +157,12 @@ callbacks:
     _target_: main.module_diffqe.QuantizationInfoLogger
     sample_rate: ${sampling_rate}
     patch_size: ${patch_size}
-    split_size: ${split_size}
-    num_residuals: ${num_residuals}
+    split_size: ${quantizer_split_size}
+    num_residuals: ${quantizer_num_residuals}
+    num_groups: ${quantizer_num_groups}
     downsample_factors: ${factors}
     extract_channels: ${extract_channels}
+    quantizer_type: ${quantizer_type}
 
 loggers:
   wandb:

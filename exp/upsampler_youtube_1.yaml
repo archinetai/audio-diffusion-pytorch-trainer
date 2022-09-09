@@ -3,7 +3,7 @@
 sampling_rate: 48000
 length: 262144
 channels: 2
-upsampler_factor: 16
+upsampler_factor: [2, 4, 8, 16, 32, 64, 128] # [24000Hz,...,375Hz]
 log_every_n_steps: 1000
 
 model:
