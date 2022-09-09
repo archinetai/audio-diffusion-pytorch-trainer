@@ -177,6 +177,9 @@ class Model(pl.LightningModule):
         # Log perplexity of each codebook used
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"train_perplexity_{i}", perplexity)
+        # Log replaced codes of each codebook used
+        for i, replaced_codes in enumerate(info["replaced_codes"]):
+            self.log(f"train_replaced_codes_{i}", replaced_codes)
         # Log commitment loss
         commitment_loss = info["loss"]
         loss += self.quantizer_loss_weight * commitment_loss
