@@ -61,6 +61,7 @@ class Model(pl.LightningModule):
         diffusion_sigma_data: int,
         diffusion_dynamic_threshold: float,
         quantizer_num_residuals: int = 1,
+        quantizer_ema_decay: float = 0.99,
         quantizer_split_size: Optional[int] = None,
     ):
         super().__init__()
@@ -100,6 +101,7 @@ class Model(pl.LightningModule):
                 expire_threshold=quantizer_expire_threshold,
                 num_residuals=quantizer_num_residuals,
                 shared_codebook=quantizer_shared_codebook,
+                ema_decay=quantizer_ema_decay,
             )
         elif self.quantizer_type == "channelwise":
             assert_message = "quantizer_split_size required with channelwise type"
@@ -112,6 +114,7 @@ class Model(pl.LightningModule):
                 expire_threshold=quantizer_expire_threshold,
                 num_residuals=quantizer_num_residuals,
                 shared_codebook=quantizer_shared_codebook,
+                ema_decay=quantizer_ema_decay,
             )
         else:
             raise ValueError("Quantizer type must be timewise or channelwise")
