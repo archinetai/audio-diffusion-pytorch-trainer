@@ -9,8 +9,7 @@ import torch
 import torchaudio
 import wandb
 from audio_data_pytorch.utils import fractional_random_split
-from audio_diffusion_pytorch import Distribution, Encoder1d, Model1d, Sampler, Schedule
-from audio_diffusion_pytorch.modules import ResnetBlock1d, TransformerBlock1d
+from audio_diffusion_pytorch import AudioDiffusionAutoencoder, Sampler, Schedule
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
@@ -32,27 +31,8 @@ class Model(pl.LightningModule):
         scheduler_inv_gamma: float,
         scheduler_power: float,
         scheduler_warmup: float,
-        in_channels: int,
-        channels: int,
-        patch_size: int,
-        resnet_groups: int,
-        kernel_multiplier_downsample: int,
-        kernel_sizes_init: Sequence[int],
-        multipliers: Sequence[int],
-        factors: Sequence[int],
-        num_blocks: Sequence[int],
-        attentions: Sequence[bool],
-        attention_heads: int,
-        attention_features: int,
-        attention_multiplier: int,
-        use_nearest_upsample: bool,
-        use_skip_scale: bool,
-        use_attention_bottleneck: bool,
-        extract_channels: List[int],
-        context_channels: List[int],
-        diffusion_sigma_distribution: Distribution,
-        diffusion_sigma_data: int,
-        diffusion_dynamic_threshold: float,
+        *args,
+        **kwargs,
     ):
         super().__init__()
         self.lr = lr
@@ -65,87 +45,20 @@ class Model(pl.LightningModule):
         self.scheduler_power = scheduler_power
         self.scheduler_warmup = scheduler_warmup
 
-        self.encoder = Encoder1d(
-            in_channels=in_channels,
-            channels=channels,
-            patch_size=patch_size,
-            resnet_groups=resnet_groups,
-            kernel_multiplier_downsample=kernel_multiplier_downsample,
-            kernel_sizes_init=kernel_sizes_init,
-            multipliers=multipliers,
-            factors=factors,
-            num_blocks=num_blocks,
-            extract_channels=extract_channels,
-        )
-
-        encoder_channels = extract_channels[-1]
-        post_encoder_channels = context_channels[-1]
-
-        self.post_encoder = nn.Sequential(
-            ResnetBlock1d(
-                in_channels=encoder_channels,
-                out_channels=post_encoder_channels,
-                num_groups=resnet_groups,
-            ),
-            TransformerBlock1d(
-                channels=post_encoder_channels,
-                num_heads=attention_heads,
-                head_features=attention_features,
-                multiplier=attention_multiplier,
-            ),
-            ResnetBlock1d(
-                in_channels=post_encoder_channels,
-                out_channels=post_encoder_channels,
-                num_groups=resnet_groups,
-            ),
-        )
-
-        self.model = Model1d(
-            in_channels=in_channels,
-            channels=channels,
-            patch_size=patch_size,
-            resnet_groups=resnet_groups,
-            kernel_multiplier_downsample=kernel_multiplier_downsample,
-            kernel_sizes_init=kernel_sizes_init,
-            multipliers=multipliers,
-            factors=factors,
-            num_blocks=num_blocks,
-            attentions=attentions,
-            attention_heads=attention_heads,
-            attention_features=attention_features,
-            attention_multiplier=attention_multiplier,
-            use_nearest_upsample=use_nearest_upsample,
-            use_skip_scale=use_skip_scale,
-            use_attention_bottleneck=use_attention_bottleneck,
-            diffusion_sigma_distribution=diffusion_sigma_distribution,
-            diffusion_sigma_data=diffusion_sigma_data,
-            diffusion_dynamic_threshold=diffusion_dynamic_threshold,
-            context_channels=[0] + context_channels,
-        )
-
-    def encode(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        x = self.encoder(x)[-1]
-        latent = torch.tanh(x)
-        x = self.post_encoder(x)
-        return x, latent
-
-    def from_latent(self, latent: Tensor) -> Tensor:
-        x = self.post_encoder(latent)
-        return x
+        self.model = AudioDiffusionAutoencoder(*args, **kwargs)
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        context, latent = self.encode(x)
-        return self.model(x, context=[context]), latent
+        return self.model(x)
 
     def training_step(self, batch, batch_idx):
         waveforms = batch
-        loss, latent = self(waveforms)
+        loss = self(waveforms)
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         waveforms = batch
-        loss, latent = self(waveforms)
+        loss = self(waveforms)
         self.log("valid_loss", loss)
         return loss
 
@@ -346,22 +259,15 @@ class SampleLogger(Callback):
             sampling_rate=self.sampling_rate,
         )
 
-        context, latent = pl_module.encode(x_true)
-
-        # Get start diffusion noise
-        batch = x_true.shape[0]
-        noise = torch.randn(
-            (batch, self.channels, self.length), device=pl_module.device
-        )
+        latent = model.encode(x_true)
 
         for steps in self.sampling_steps:
 
-            samples = model.sample(
-                noise=noise,
+            samples = model.decode(
+                latent,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,
-                context=[context],
             )
             log_wandb_audio_batch(
                 logger=wandb_logger,
