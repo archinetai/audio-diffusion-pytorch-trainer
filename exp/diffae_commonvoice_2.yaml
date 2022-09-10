@@ -95,15 +95,6 @@ callbacks:
       sigma_max: 3.0
       rho: 9.0
 
-  quantization_info:
-    _target_: main.module_diffqe.QuantizationInfoLogger
-    sample_rate: ${sampling_rate}
-    patch_size: ${patch_size}
-    split_size: ${split_size}
-    num_residuals: ${num_residuals}
-    downsample_factors: ${factors}
-    extract_channels: ${extract_channels}
-
 loggers:
   wandb:
     _target_: pytorch_lightning.loggers.wandb.WandbLogger
