@@ -33,7 +33,7 @@ model:
   use_skip_scale: True
   use_attention_bottleneck: True
   encoder_depth: 4
-  encoder_channels: 64
+  encoder_channels: 256
   context_channels: 512
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
@@ -52,7 +52,8 @@ datamodule:
       _target_: audio_data_pytorch.AllTransform
       random_crop_size: ${length}
       stereo: True
-  val_split: 0.01
+      loudness: -20
+  val_split: 0.0005
   batch_size: 32
   num_workers: 8
   pin_memory: True
