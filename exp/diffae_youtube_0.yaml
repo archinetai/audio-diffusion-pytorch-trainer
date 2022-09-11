@@ -1,6 +1,6 @@
 # @package _global_
 
-sampling_rate: 12000
+sampling_rate: 24000
 length: 262144
 channels: 2
 log_every_n_steps: 1000
@@ -99,6 +99,7 @@ datamodule:
       source_rate: 48000
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
+      loudness: -20
   val_split: 0.001
   batch_size: 32
   num_workers: 8
