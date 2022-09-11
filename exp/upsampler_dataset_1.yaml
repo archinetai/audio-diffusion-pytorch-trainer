@@ -51,7 +51,10 @@ datamodule:
       _target_: audio_data_pytorch.AllTransform
       random_crop_size: ${length}
       stereo: True
-  val_split: 0.01
+      source_rate: ${sampling_rate}
+      target_rate: ${sampling_rate}
+      loudness: -20
+  val_split: 0.0005
   batch_size: 32
   num_workers: 8
   pin_memory: True

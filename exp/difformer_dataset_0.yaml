@@ -37,6 +37,8 @@ model:
     std: 1.0
   diffusion_sigma_data: 0.1
   diffusion_dynamic_threshold: 0.0
+  difformer_num_layers: 8
+
 
 datamodule:
   _target_: main.module_difformer.Datamodule
