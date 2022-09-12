@@ -9,8 +9,7 @@ import torch
 import torchaudio
 import wandb
 from audio_data_pytorch.utils import fractional_random_split
-from audio_diffusion_pytorch import Distribution, Encoder1d, Model1d, Sampler, Schedule
-from audio_diffusion_pytorch.modules import ResnetBlock1d, TransformerBlock1d
+from audio_diffusion_pytorch import AudioDiffusionAutoencoder, Sampler, Schedule
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
@@ -33,36 +32,18 @@ class Model(pl.LightningModule):
         scheduler_inv_gamma: float,
         scheduler_power: float,
         scheduler_warmup: float,
-        in_channels: int,
-        channels: int,
-        patch_size: int,
-        resnet_groups: int,
-        kernel_multiplier_downsample: int,
-        kernel_sizes_init: Sequence[int],
-        multipliers: Sequence[int],
-        factors: Sequence[int],
-        num_blocks: Sequence[int],
-        attentions: Sequence[bool],
-        attention_heads: int,
-        attention_features: int,
-        attention_multiplier: int,
-        use_nearest_upsample: bool,
-        use_skip_scale: bool,
-        use_attention_bottleneck: bool,
-        extract_channels: List[int],
-        context_channels: List[int],
-        codebook_size: int,
+        encoder_channels: int,
+        context_channels: int,
         quantizer_type: str,
         quantizer_loss_weight: float,
-        quantizer_groups: int,
+        quantizer_codebook_size: int,
         quantizer_expire_threshold: float,
+        quantizer_num_residuals: int,
         quantizer_shared_codebook: bool,
-        diffusion_sigma_distribution: Distribution,
-        diffusion_sigma_data: int,
-        diffusion_dynamic_threshold: float,
-        quantizer_num_residuals: int = 1,
-        quantizer_ema_decay: float = 0.99,
+        quantizer_ema_decay: float,
+        quantizer_groups: int = 1,
         quantizer_split_size: Optional[int] = None,
+        **kwargs,
     ):
         super().__init__()
         self.lr = lr
@@ -74,43 +55,26 @@ class Model(pl.LightningModule):
         self.scheduler_inv_gamma = scheduler_inv_gamma
         self.scheduler_power = scheduler_power
         self.scheduler_warmup = scheduler_warmup
-        self.quantizer_type = quantizer_type
         self.quantizer_loss_weight = quantizer_loss_weight
 
-        self.encoder = Encoder1d(
-            in_channels=in_channels,
-            channels=channels,
-            patch_size=patch_size,
-            resnet_groups=resnet_groups,
-            kernel_multiplier_downsample=kernel_multiplier_downsample,
-            kernel_sizes_init=kernel_sizes_init,
-            multipliers=multipliers,
-            factors=factors,
-            num_blocks=num_blocks,
-            extract_channels=extract_channels,
-        )
-
-        quantizer_channels = extract_channels[-1]
-        post_quantizer_channels = context_channels[-1]
-
-        if self.quantizer_type == "timewise":
+        if quantizer_type == "timewise":
             self.quantizer = Quantizer1d(
-                channels=quantizer_channels,
+                channels=encoder_channels,
                 num_groups=quantizer_groups,
-                codebook_size=codebook_size,
+                codebook_size=quantizer_codebook_size,
                 expire_threshold=quantizer_expire_threshold,
                 num_residuals=quantizer_num_residuals,
                 shared_codebook=quantizer_shared_codebook,
                 ema_decay=quantizer_ema_decay,
             )
-        elif self.quantizer_type == "channelwise":
+        elif quantizer_type == "channelwise":
             assert_message = "quantizer_split_size required with channelwise type"
             assert quantizer_split_size is not None, assert_message
             self.quantizer = QuantizerChannelwise1d(
-                channels=quantizer_channels,
+                channels=encoder_channels,
                 split_size=quantizer_split_size,
                 num_groups=quantizer_groups,
-                codebook_size=codebook_size,
+                codebook_size=quantizer_codebook_size,
                 expire_threshold=quantizer_expire_threshold,
                 num_residuals=quantizer_num_residuals,
                 shared_codebook=quantizer_shared_codebook,
@@ -119,62 +83,15 @@ class Model(pl.LightningModule):
         else:
             raise ValueError("Quantizer type must be timewise or channelwise")
 
-        self.post_quantizer = nn.Sequential(
-            ResnetBlock1d(
-                in_channels=quantizer_channels,
-                out_channels=post_quantizer_channels,
-                num_groups=resnet_groups,
-            ),
-            TransformerBlock1d(
-                channels=post_quantizer_channels,
-                num_heads=attention_heads,
-                head_features=attention_features,
-                multiplier=attention_multiplier,
-            ),
-            ResnetBlock1d(
-                in_channels=post_quantizer_channels,
-                out_channels=post_quantizer_channels,
-                num_groups=resnet_groups,
-            ),
+        self.model = AudioDiffusionAutoencoder(
+            encoder_channels=encoder_channels, bottleneck=self.quantizer, **kwargs
         )
-
-        self.model = Model1d(
-            in_channels=in_channels,
-            channels=channels,
-            patch_size=patch_size,
-            resnet_groups=resnet_groups,
-            kernel_multiplier_downsample=kernel_multiplier_downsample,
-            kernel_sizes_init=kernel_sizes_init,
-            multipliers=multipliers,
-            factors=factors,
-            num_blocks=num_blocks,
-            attentions=attentions,
-            attention_heads=attention_heads,
-            attention_features=attention_features,
-            attention_multiplier=attention_multiplier,
-            use_nearest_upsample=use_nearest_upsample,
-            use_skip_scale=use_skip_scale,
-            use_attention_bottleneck=use_attention_bottleneck,
-            diffusion_sigma_distribution=diffusion_sigma_distribution,
-            diffusion_sigma_data=diffusion_sigma_data,
-            diffusion_dynamic_threshold=diffusion_dynamic_threshold,
-            context_channels=[0] + context_channels,
-        )
-
-    def encode(self, x: Tensor) -> Tuple[Tensor, Dict]:
-        x = self.encoder(x)[-1]
-        x, info = self.quantizer(x)
-        x = self.post_quantizer(x)
-        return x, info
 
     def from_ids(self, indices: LongTensor) -> Tensor:
-        x = self.quantizer.from_ids(indices)
-        x = self.post_quantizer(x)
-        return x
+        return self.quantizer.from_ids(indices)
 
-    def forward(self, x: Tensor) -> Tuple[Tensor, Dict]:
-        context, info = self.encode(x)
-        return self.model(x, context=[context]), info
+    def forward(self, x: Tensor) -> Tensor:
+        return self.model(x, with_info=True)
 
     def training_step(self, batch, batch_idx):
         waveforms = batch
@@ -186,6 +103,9 @@ class Model(pl.LightningModule):
         # Log replaced codes of each codebook used
         for i, replaced_codes in enumerate(info["replaced_codes"]):
             self.log(f"train_replaced_codes_{i}", replaced_codes)
+        # Log budget
+        for i, budget in enumerate(info["budget"]):
+            wandb.log({f"budget_{i}": budget})
         # Log commitment loss
         commitment_loss = info["loss"]
         loss += self.quantizer_loss_weight * commitment_loss
@@ -226,7 +146,7 @@ class Model(pl.LightningModule):
 
     @property
     def device(self):
-        return next(self.model.parameters()).device
+        return next(self.parameters()).device
 
 
 """ Datamodule """
@@ -355,13 +275,12 @@ class QuantizationInfoLogger(Callback):
         num_groups: int,
         quantizer_type: str,
         downsample_factors: List[int],
-        extract_channels: List[int],
+        encoder_depth: int,
+        channels: int,
     ):
-        encoder_depth = len(extract_channels)
         downsample_factors = downsample_factors[0:encoder_depth]
         encoder_downsample = reduce((lambda x, y: x * y), downsample_factors)
         downsample_factor = patch_size * encoder_downsample
-        channels = extract_channels[-1]
 
         self.quantizer_type = quantizer_type
         self.tokens_per_second = 0.0
@@ -454,7 +373,7 @@ class SampleLogger(Callback):
             sampling_rate=self.sampling_rate,
         )
 
-        context, info = pl_module.encode(x_true)
+        context, info = model.encode(x_true, with_info=True)
         indices = info["indices"]
         indices_cpu = rearrange(indices, "b ... -> b (...)").detach().cpu().numpy()
 
@@ -462,23 +381,16 @@ class SampleLogger(Callback):
         table = go.Figure(data=[go.Table(cells=dict(values=indices_cpu))])
         wandb_logger.log({"indices": table})
 
-        # Get start diffusion noise
-        batch = x_true.shape[0]
-        noise = torch.randn(
-            (batch, self.channels, self.length), device=pl_module.device
-        )
-
-        # Compute context
+        # Compute context from indices (just to make sure it's working)
         context = pl_module.from_ids(indices)
 
         for steps in self.sampling_steps:
 
-            samples = model.sample(
-                noise=noise,
+            samples = model.decode(
+                context,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,
-                context=[context],
             )
             log_wandb_audio_batch(
                 logger=wandb_logger,
