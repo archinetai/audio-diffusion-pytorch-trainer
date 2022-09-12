@@ -7,7 +7,7 @@ log_every_n_steps: 1000
 channels: 1
 patch_size: 16
 factors: [4, 4, 4, 2, 2, 2]
-encoder_channels: 64
+encoder_channels: 128
 encoder_depth: 4
 
 quantizer_type: timewise
