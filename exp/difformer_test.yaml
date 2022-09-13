@@ -39,6 +39,8 @@ model:
   diffusion_dynamic_threshold: 0.0
   autoencoder_ckpt: /Users/flavioschneider/Documents/playground/data/audio_916_452k.ckpt
   difformer_num_layers: 8
+  difformer_head_features: 512
+  difformer_multiplier: 8
 
 datamodule:
   _target_: main.module_difformer.Datamodule

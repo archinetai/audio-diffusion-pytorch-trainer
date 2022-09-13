@@ -35,6 +35,8 @@ class Model(pl.LightningModule):
         encoder_channels: int,
         autoencoder_ckpt: str,
         difformer_num_layers: int,
+        difformer_head_features: int,
+        difformer_multiplier: int,
         **kwargs,
     ):
         super().__init__()
@@ -45,7 +47,10 @@ class Model(pl.LightningModule):
         self.lr_weight_decay = lr_weight_decay
 
         self.difformer = Difformer(
-            embedding_dim=encoder_channels, num_layers=difformer_num_layers
+            embedding_dim=encoder_channels,
+            num_layers=difformer_num_layers,
+            head_features=difformer_head_features,
+            multiplier=difformer_multiplier,
         )
 
         self.autoencoder = AudioDiffusionAutoencoder(
