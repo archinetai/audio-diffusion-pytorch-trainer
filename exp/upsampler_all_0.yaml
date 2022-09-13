@@ -45,27 +45,28 @@ datamodule:
   _target_: main.module_upsampler.Datamodule
   dataset:
     _target_: torch.utils.data.ConcatDataset
-    - _target_: audio_data_pytorch.WAVDataset
-      recursive: True
-      sample_rate: ${sampling_rate}
-      transforms:
-        _target_: audio_data_pytorch.AllTransform
-        random_crop_size: ${length}
-        stereo: True
-        source_rate: ${sampling_rate}
-        target_rate: ${sampling_rate}
-        loudness: -20
-    - _target_: audio_data_pytorch.CommonVoiceDataset
-      auth_token: ${oc.env:HUGGINGFACE_TOKEN}
-      root: ${data_dir}
-      version: 8
-      languages: ["en"]
-      transforms:
-        _target_: audio_data_pytorch.AllTransform
-        source_rate: 48000
-        target_rate: ${sampling_rate}
-        random_crop_size: ${length}
-        loudness: -20
+    datasets:
+      - _target_: audio_data_pytorch.WAVDataset
+        recursive: True
+        sample_rate: ${sampling_rate}
+        transforms:
+          _target_: audio_data_pytorch.AllTransform
+          random_crop_size: ${length}
+          stereo: True
+          source_rate: ${sampling_rate}
+          target_rate: ${sampling_rate}
+          loudness: -20
+      - _target_: audio_data_pytorch.CommonVoiceDataset
+        auth_token: ${oc.env:HUGGINGFACE_TOKEN}
+        root: ${data_dir}
+        version: 8
+        languages: ["en"]
+        transforms:
+          _target_: audio_data_pytorch.AllTransform
+          source_rate: 48000
+          target_rate: ${sampling_rate}
+          random_crop_size: ${length}
+          loudness: -20
 
   val_split: 0.0005
   batch_size: 24
