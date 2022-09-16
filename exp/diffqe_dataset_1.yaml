@@ -7,12 +7,14 @@ log_every_n_steps: 1000
 channels: 2
 patch_size: 8
 factors: [4, 4, 4, 2]
-extract_channels: [0, 0, 0, 128]
+encoder_channels: 512
+encoder_depth: 3
+
 quantizer_type: timewise
 quantizer_split_size: null
+quantizer_codebook_size: 8192
 quantizer_num_residuals: 1
 quantizer_num_groups: 1
-quantizer_codebook_size: 4096
 
 model:
   _target_: main.module_diffqe.Model
@@ -25,6 +27,7 @@ model:
   scheduler_inv_gamma: 20000.0
   scheduler_power: 1.0
   scheduler_warmup: 0.99
+
   in_channels: ${channels}
   channels: 128
   patch_size: ${patch_size}
@@ -41,22 +44,27 @@ model:
   use_nearest_upsample: False
   use_skip_scale: True
   use_attention_bottleneck: True
-  extract_channels: ${extract_channels}
-  context_channels: [0, 0, 0, 512]
-  codebook_size: ${quantizer_codebook_size}
-  quantizer_type: ${quantizer_type}
-  quantizer_num_residuals: ${quantizer_num_residuals}
-  quantizer_loss_weight: 1e-5
-  quantizer_groups: ${quantizer_num_groups}
-  quantizer_split_size: ${quantizer_split_size}
-  quantizer_expire_threshold: 0.001
-  quantizer_shared_codebook: False
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
     std: 1.0
   diffusion_sigma_data: 0.1
   diffusion_dynamic_threshold: 0.0
+
+  encoder_channels: ${encoder_channels}
+  encoder_depth: ${encoder_depth}
+  context_channels: 512
+  quantizer_type: ${quantizer_type}
+  quantizer_codebook_size: ${quantizer_codebook_size}
+  quantizer_num_residuals: ${quantizer_num_residuals}
+  quantizer_loss_weight: 1e-5
+  quantizer_groups: ${quantizer_num_groups}
+  quantizer_split_size: ${quantizer_split_size}
+  quantizer_expire_threshold: 0.05
+  quantizer_shared_codebook: True
+  quantizer_ema_decay: 0.99
+
+
 
 datamodule:
   _target_: main.module_diffqe.Datamodule
@@ -68,7 +76,8 @@ datamodule:
       _target_: audio_data_pytorch.AllTransform
       random_crop_size: ${length}
       stereo: True
-  val_split: 0.01
+      loudness: -20
+  val_split: 0.0005
   batch_size: 32
   num_workers: 8
   pin_memory: True
@@ -115,7 +124,8 @@ callbacks:
     num_residuals: ${quantizer_num_residuals}
     num_groups: ${quantizer_num_groups}
     downsample_factors: ${factors}
-    extract_channels: ${extract_channels}
+    channels: ${encoder_channels}
+    encoder_depth: ${encoder_depth}
     quantizer_type: ${quantizer_type}
 
 loggers:
