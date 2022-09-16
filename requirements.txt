@@ -13,8 +13,11 @@ omegaconf
 rich
 plotly
 librosa
+transformers
+sentencepiece
 
 audio-diffusion-pytorch
 audio-data-pytorch
 quantizer-pytorch
 difformer-pytorch
+a-transformers-pytorch
