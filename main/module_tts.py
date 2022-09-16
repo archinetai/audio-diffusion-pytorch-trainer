@@ -275,7 +275,8 @@ class SampleLogger(Callback):
         wandb_logger = get_wandb_logger(trainer).experiment
         model = pl_module.model
 
-        waveform, info = batch[0 : self.num_items]
+        waveform, info = batch
+        waveform = waveform[0 : self.num_items]
 
         log_wandb_audio_batch(
             logger=wandb_logger,
