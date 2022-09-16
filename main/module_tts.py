@@ -290,14 +290,14 @@ class SampleLogger(Callback):
             sampling_rate=self.sampling_rate,
         )
 
-        text = info["text"]
-        self.text_table.add_data(text)
+        texts = info["text"][0 : self.num_items]
+        self.text_table.add_data(texts)
         wandb_logger.log({"text": self.text_table})
 
         noise = torch.randn(
             (self.num_items, self.channels, self.length), device=pl_module.device
         )
-        embedding = pl_module.get_text_embedding(text)
+        embedding = pl_module.get_text_embedding(texts)
 
         for steps in self.sampling_steps:
 

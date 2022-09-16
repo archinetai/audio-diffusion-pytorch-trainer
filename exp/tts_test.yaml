@@ -87,7 +87,7 @@ callbacks:
 
   audio_samples_logger:
     _target_: main.module_tts.SampleLogger
-    num_items: 4
+    num_items: 2
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
