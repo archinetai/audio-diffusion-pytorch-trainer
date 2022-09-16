@@ -252,8 +252,6 @@ class SampleLogger(Callback):
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
 
-        self.text_table = wandb.Table(columns=["text"])
-
         self.log_next = False
 
     def on_validation_epoch_start(self, trainer, pl_module):
@@ -292,8 +290,10 @@ class SampleLogger(Callback):
         )
 
         texts = info["text"][0 : self.num_items]
-        self.text_table.add_data(texts)
-        wandb_logger.log({"text": self.text_table})
+
+        text_table = wandb.Table(columns=["text"])
+        text_table.add_data(texts)
+        wandb_logger.log({"text": text_table})
 
         noise = torch.randn(
             (self.num_items, self.channels, self.length), device=pl_module.device
