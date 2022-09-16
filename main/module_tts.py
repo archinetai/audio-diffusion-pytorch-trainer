@@ -16,7 +16,7 @@ from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
 from torch import LongTensor, Tensor, nn
 from torch.utils.data import DataLoader
-from transformers import T5Tokenizer
+from transformers import AutoTokenizer
 
 """ Model """
 
@@ -35,7 +35,7 @@ class Model(pl.LightningModule):
         encoder_head_features: int,
         encoder_num_heads: int,
         encoder_multiplier: int,
-        encoder_num_tokens: int = 32128,  # T5
+        encoder_num_tokens: int = 259,  # T5
         **kwargs,
     ):
         super().__init__()
@@ -46,8 +46,8 @@ class Model(pl.LightningModule):
         self.lr_weight_decay = lr_weight_decay
         self.max_length = encoder_max_length
 
-        self.tokenizer = T5Tokenizer.from_pretrained(
-            pretrained_model_name_or_path="google/t5-v1_1-base",
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path="google/byt5-base",
             model_max_length=encoder_max_length,
         )
 
