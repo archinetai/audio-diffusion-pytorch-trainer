@@ -1,6 +1,6 @@
 # @package _global_
 
-sampling_rate: 16000
+sampling_rate: 12000
 length: 131072
 channels: 1
 log_every_n_steps: 1000
@@ -14,8 +14,8 @@ model:
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
 
-  encoder_tokenizer: google/byt5-base
-  encoder_num_tokens: 259
+  encoder_tokenizer: t5-base
+  encoder_num_tokens: 32128
   encoder_features: 768
   encoder_max_length: 256
   encoder_num_layers: 8
@@ -25,7 +25,7 @@ model:
 
   in_channels: ${channels}
   channels: 128
-  patch_size: 16
+  patch_size: 8
   resnet_groups: 8
   kernel_multiplier_downsample: 2
   kernel_sizes_init: [1, 3, 7]

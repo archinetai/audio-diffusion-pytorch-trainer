@@ -16,6 +16,8 @@ model:
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
 
+  encoder_tokenizer: t5-base
+  encoder_num_tokens: 32128
   encoder_features: 768
   encoder_max_length: 256
   encoder_num_layers: 8

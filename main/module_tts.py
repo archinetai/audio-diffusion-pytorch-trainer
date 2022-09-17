@@ -29,13 +29,14 @@ class Model(pl.LightningModule):
         lr_beta1: float,
         lr_beta2: float,
         lr_weight_decay: float,
+        encoder_tokenizer: str,
+        encoder_num_tokens: int,
         encoder_features: int,
         encoder_max_length: int,
         encoder_num_layers: int,
         encoder_head_features: int,
         encoder_num_heads: int,
         encoder_multiplier: int,
-        encoder_num_tokens: int = 259,  # T5
         **kwargs,
     ):
         super().__init__()
@@ -47,7 +48,7 @@ class Model(pl.LightningModule):
         self.max_length = encoder_max_length
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path="google/byt5-base",
+            pretrained_model_name_or_path=encoder_tokenizer,
             model_max_length=encoder_max_length,
         )
 
