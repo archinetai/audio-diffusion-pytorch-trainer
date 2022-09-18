@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 import torch
 import torchaudio
 import wandb
-from a_transformers_pytorch import Transformer
+from a_transformers_pytorch.transformers import Transformer
 from audio_data_pytorch.utils import fractional_random_split
 from audio_diffusion_pytorch import AudioDiffusionModel, Sampler, Schedule
 from einops import rearrange
