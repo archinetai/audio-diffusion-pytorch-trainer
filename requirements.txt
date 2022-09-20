@@ -14,6 +14,7 @@ rich
 plotly
 librosa
 transformers
+eng-to-ipa
 
 audio-diffusion-pytorch
 audio-data-pytorch

@@ -24,6 +24,7 @@ model:
   encoder_head_features: 64
   encoder_num_heads: 12
   encoder_multiplier: 4
+  use_phonemizer: True
 
   embedding_max_length: 256
   embedding_features: 768

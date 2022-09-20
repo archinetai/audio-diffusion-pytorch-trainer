@@ -1,6 +1,7 @@
 from functools import reduce
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
+import eng_to_ipa
 import librosa
 import plotly.graph_objects as go
 import plotly.graph_objs as go
@@ -21,6 +22,10 @@ from transformers import AutoTokenizer
 """ Model """
 
 
+def phonemize(texts):
+    return [eng_to_ipa.convert(text) for text in texts]
+
+
 class Model(pl.LightningModule):
     def __init__(
         self,
@@ -37,6 +42,7 @@ class Model(pl.LightningModule):
         encoder_head_features: int,
         encoder_num_heads: int,
         encoder_multiplier: int,
+        use_phonemizer: bool,
         **kwargs,
     ):
         super().__init__()
@@ -46,6 +52,7 @@ class Model(pl.LightningModule):
         self.lr_beta2 = lr_beta2
         self.lr_weight_decay = lr_weight_decay
         self.max_length = encoder_max_length
+        self.use_phonemizer = use_phonemizer
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=encoder_tokenizer,
@@ -73,7 +80,7 @@ class Model(pl.LightningModule):
     def get_text_embedding(self, texts: List[str]) -> Tensor:
         # Compute batch of tokens and mask from texts
         encoded = self.tokenizer.batch_encode_plus(
-            texts,
+            phonemize(texts) if self.use_phonemizer else texts,
             return_tensors="pt",
             padding="max_length",
             max_length=self.max_length,
