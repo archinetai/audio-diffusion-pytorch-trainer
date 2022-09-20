@@ -10,7 +10,7 @@ import torchaudio
 import wandb
 from a_transformers_pytorch.transformers import Transformer
 from audio_data_pytorch.utils import fractional_random_split
-from audio_diffusion_pytorch import AudioDiffusionModel, Sampler, Schedule
+from audio_diffusion_pytorch import AudioDiffusionConditional, Sampler, Schedule
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
@@ -63,10 +63,12 @@ class Model(pl.LightningModule):
             multiplier=encoder_multiplier,
         )
 
-        self.model = AudioDiffusionModel(context_features=encoder_features, **kwargs)
+        self.model = AudioDiffusionConditional(
+            context_embedding_features=encoder_features, **kwargs
+        )
 
     def forward(self, x: Tensor, embedding: Tensor) -> Tuple[Tensor, Tensor]:
-        return self.model(x, tokens=embedding)
+        return self.model(x, embedding=embedding)
 
     def get_text_embedding(self, texts: List[str]) -> Tensor:
         # Compute batch of tokens and mask from texts
@@ -240,6 +242,7 @@ class SampleLogger(Callback):
         sampling_rate: int,
         length: int,
         sampling_steps: List[int],
+        embedding_scale: float,
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
     ) -> None:
@@ -249,6 +252,7 @@ class SampleLogger(Callback):
         self.length = length
         self.sampling_steps = sampling_steps
         self.epoch_count = 0
+        self.embedding_scale = embedding_scale
 
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
@@ -305,7 +309,8 @@ class SampleLogger(Callback):
 
             samples = model.sample(
                 noise,
-                tokens=embedding,
+                embedding=embedding,
+                embedding_scale=self.embedding_scale,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,

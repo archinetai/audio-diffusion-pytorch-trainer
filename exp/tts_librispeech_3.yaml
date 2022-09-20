@@ -1,6 +1,6 @@
 # @package _global_
 
-sampling_rate: 16000
+sampling_rate: 12000
 length: 131072
 channels: 1
 log_every_n_steps: 1000
@@ -14,18 +14,22 @@ model:
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
 
-  encoder_tokenizer: google/byt5-base
-  encoder_num_tokens: 259
+  encoder_tokenizer: t5-base
+  encoder_num_tokens: 32128
   encoder_features: 768
-  encoder_max_length: 256
+  encoder_max_length: 512
   encoder_num_layers: 8
   encoder_head_features: 64
   encoder_num_heads: 12
   encoder_multiplier: 4
 
+  embedding_max_length: 512
+  embedding_features: 768
+  embedding_mask_proba: 0.1
+
   in_channels: ${channels}
   channels: 128
-  patch_size: 16
+  patch_size: 8
   resnet_groups: 8
   kernel_multiplier_downsample: 2
   kernel_sizes_init: [1, 3, 7]
@@ -60,7 +64,7 @@ datamodule:
       crop_size: ${length}
       loudness: -20
   val_split: 0.001
-  batch_size: 32
+  batch_size: 16
   num_workers: 8
   pin_memory: True
 
@@ -89,6 +93,7 @@ callbacks:
     sampling_rate: ${sampling_rate}
     length: ${length}
     sampling_steps: [3, 10, 25, 50]
+    embedding_scale: 5.0
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0
@@ -119,3 +124,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
+  accumulate_grad_batches: 2
