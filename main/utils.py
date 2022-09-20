@@ -1,11 +1,14 @@
 import logging
+import os
 import warnings
-from typing import Callable, List, Sequence
+from typing import Callable, List, Optional, Sequence
 
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
+import torch
 from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning import Callback
 from pytorch_lightning.utilities import rank_zero_only
 
 
@@ -170,3 +173,25 @@ def retry_if_error(fn: Callable, num_attemps: int = 10):
             print(f"Retrying, attempt {attempt+1}")
             pass
     return fn()
+
+
+class SavePytorchModelAndStopCallback(Callback):
+    def __init__(self, path: str, attribute: Optional[str] = None):
+        self.path = path
+        self.attribute = attribute
+
+    def setup(self, trainer, pl_module, stage):
+        model, path = pl_module, self.path
+        if self.attribute is not None:
+            assert_message = "provided model attribute not found in pl_module"
+            assert hasattr(pl_module, self.attribute), assert_message
+            model = getattr(
+                pl_module, self.attribute, hasattr(pl_module, self.attribute)
+            )
+        # Make dir if not existent
+        os.makedirs(os.path.split(path)[0], exist_ok=True)
+        # Save model
+        torch.save(model, path)
+        log.info(f"PyTorch model saved at: {path}")
+        # Stop trainer
+        trainer.should_stop = True

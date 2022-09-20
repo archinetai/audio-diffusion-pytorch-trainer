@@ -4,7 +4,7 @@ import dotenv
 import hydra
 import pytorch_lightning as pl
 from main import utils
-from omegaconf import DictConfig
+from omegaconf import DictConfig, open_dict
 
 # Load environment variables from `.env`.
 dotenv.load_dotenv(override=True)
@@ -30,6 +30,18 @@ def main(config: DictConfig) -> None:
 
     # Initialize all callbacks (e.g. checkpoints, early stopping)
     callbacks = []
+
+    # If save is provided add callback that saves and stops, to be used with +ckpt
+    if "save" in config:
+        # Ignore loggers and other callbacks
+        with open_dict(config):
+            config.pop("loggers")
+            config.pop("callbacks")
+            config.trainer.num_sanity_val_steps = 0
+        attribute, path = config.get("save"), config.get("ckpt_dir")
+        filename = os.path.join(path, f"{attribute}.pt")
+        callbacks += [utils.SavePytorchModelAndStopCallback(filename, attribute)]
+
     if "callbacks" in config:
         for _, cb_conf in config["callbacks"].items():
             if "_target_" in cb_conf:
@@ -86,7 +98,11 @@ def main(config: DictConfig) -> None:
     )
 
     # Print path to best checkpoint
-    if not config.trainer.get("fast_dev_run") and config.get("train"):
+    if (
+        not config.trainer.get("fast_dev_run")
+        and config.get("train")
+        and not config.get("save")
+    ):
         log.info(f"Best model ckpt at {trainer.checkpoint_callback.best_model_path}")
 
 
