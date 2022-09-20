@@ -55,8 +55,7 @@ class Model(pl.LightningModule):
         self.use_phonemizer = use_phonemizer
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path=encoder_tokenizer,
-            model_max_length=encoder_max_length,
+            pretrained_model_name_or_path=encoder_tokenizer
         )
 
         self.to_embedding = nn.Embedding(encoder_num_tokens, encoder_features)

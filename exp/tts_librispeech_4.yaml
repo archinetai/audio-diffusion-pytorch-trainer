@@ -14,8 +14,8 @@ model:
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
 
-  encoder_tokenizer: t5-base
-  encoder_num_tokens: 32128
+  encoder_tokenizer: google/byt5-base
+  encoder_num_tokens: 260
   encoder_features: 768
   encoder_max_length: 512
   encoder_num_layers: 8
@@ -94,7 +94,7 @@ callbacks:
     sampling_rate: ${sampling_rate}
     length: ${length}
     sampling_steps: [3, 10, 25, 50]
-    embedding_scale: 5.0
+    embedding_scale: 7.0
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0
