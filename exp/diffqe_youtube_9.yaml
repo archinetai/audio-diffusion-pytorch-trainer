@@ -54,7 +54,6 @@ model:
 
   encoder_channels: ${encoder_channels}
   encoder_depth: ${encoder_depth}
-  context_channels: 512
   quantizer_type: ${quantizer_type}
   quantizer_codebook_size: ${quantizer_codebook_size}
   quantizer_num_residuals: ${quantizer_num_residuals}

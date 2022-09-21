@@ -18,7 +18,7 @@ model:
 
   autoencoder_path: null
   num_tokens: 2048
-  max_length: 514
+  max_length: 1024
 
 datamodule:
   _target_: main.module_autoregressive_gpt.Datamodule

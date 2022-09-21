@@ -34,7 +34,6 @@ model:
   use_attention_bottleneck: True
   encoder_depth: 4
   encoder_channels: 256
-  context_channels: 512
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
