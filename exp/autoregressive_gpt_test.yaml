@@ -1,9 +1,9 @@
 # @package _global_
 
-# Test with length 65536, batch size 4, logger sampling_steps [3]
+# Test with length 131072, batch size 4, logger sampling_steps [3]
 
-sampling_rate: 24000
-length: 65536
+sampling_rate: 16000
+length: 131072
 channels: 1
 log_every_n_steps: 1000
 
@@ -18,7 +18,7 @@ model:
 
   autoencoder_path: null
   num_tokens: 2048
-  max_length: 512
+  max_length: 514
 
 datamodule:
   _target_: main.module_autoregressive_gpt.Datamodule
