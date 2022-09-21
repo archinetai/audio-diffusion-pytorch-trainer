@@ -40,8 +40,13 @@ class Model(pl.LightningModule):
         self.lr_weight_decay = lr_weight_decay
         self.num_residuals = None
 
-        configuration = GPT2Config(vocab_size=num_tokens, n_positions=max_length)
-        self.trasformer = GPT2LMHeadModel(configuration)
+        configuration = GPT2Config(
+            vocab_size=num_tokens + 1,
+            n_positions=max_length,
+            bos_token_id=num_tokens,
+            eos_token_id=num_tokens,
+        )
+        self.transformer = GPT2LMHeadModel(configuration)
         self.autoencoder = torch.load(autoencoder_path, map_location=self.device)
 
     def encode(self, x: Tensor) -> Tensor:
