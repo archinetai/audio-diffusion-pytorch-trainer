@@ -33,7 +33,6 @@ class Model(pl.LightningModule):
         scheduler_power: float,
         scheduler_warmup: float,
         encoder_channels: int,
-        context_channels: int,
         quantizer_type: str,
         quantizer_loss_weight: float,
         quantizer_codebook_size: int,
