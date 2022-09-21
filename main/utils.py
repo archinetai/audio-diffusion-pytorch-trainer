@@ -180,7 +180,7 @@ class SavePytorchModelAndStopCallback(Callback):
         self.path = path
         self.attribute = attribute
 
-    def setup(self, trainer, pl_module, stage):
+    def on_train_start(self, trainer, pl_module):
         model, path = pl_module, self.path
         if self.attribute is not None:
             assert_message = "provided model attribute not found in pl_module"
