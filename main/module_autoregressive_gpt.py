@@ -65,8 +65,11 @@ class Model(pl.LightningModule):
 
     def forward(self, x: Tensor) -> Tensor:
         indices = self.encode(x)
+        attention_mask = torch.ones_like(indices)
         # Predict next autoregressively index and return loss
-        return self.transformer(input_ids=indices, labels=indices)["loss"]
+        return self.transformer(
+            input_ids=indices, labels=indices, attention_mask=attention_mask
+        )["loss"]
 
     def training_step(self, batch, batch_idx):
         waveforms = batch
