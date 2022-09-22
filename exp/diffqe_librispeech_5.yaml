@@ -6,7 +6,7 @@ log_every_n_steps: 1000
 
 channels: 1
 patch_size: 8
-factors: [4, 4, 4, 2, 2, 2]
+factors: [4, 4, 4]
 encoder_channels: 256
 encoder_depth: 3
 

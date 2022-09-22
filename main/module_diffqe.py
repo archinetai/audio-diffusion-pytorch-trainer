@@ -309,6 +309,10 @@ class QuantizationInfoLogger(Callback):
             self.ticks_per_second = ticks_per_second
             self.tokens_per_second = ticks_per_second * num_residuals * num_groups
 
+        if quantizer_type == "block":
+            splits_per_second = sample_rate / (downsample_factor * split_size)
+            self.tokens_per_second = splits_per_second * num_residuals
+
     def on_train_start(self, trainer, pl_module):
         logger = get_wandb_logger(trainer)
         if self.quantizer_type == "timewise":
