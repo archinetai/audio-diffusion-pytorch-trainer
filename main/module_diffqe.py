@@ -13,7 +13,7 @@ from audio_diffusion_pytorch import AudioDiffusionAutoencoder, Sampler, Schedule
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
-from quantizer_pytorch import Quantizer1d, QuantizerChannelwise1d
+from quantizer_pytorch import Quantizer1d, QuantizerBlock1d, QuantizerChannelwise1d
 from torch import LongTensor, Tensor, nn
 from torch.utils.data import DataLoader
 
@@ -70,6 +70,19 @@ class Model(pl.LightningModule):
             assert_message = "quantizer_split_size required with channelwise type"
             assert quantizer_split_size is not None, assert_message
             self.quantizer = QuantizerChannelwise1d(
+                channels=encoder_channels,
+                split_size=quantizer_split_size,
+                num_groups=quantizer_groups,
+                codebook_size=quantizer_codebook_size,
+                expire_threshold=quantizer_expire_threshold,
+                num_residuals=quantizer_num_residuals,
+                shared_codebook=quantizer_shared_codebook,
+                ema_decay=quantizer_ema_decay,
+            )
+        elif quantizer_type == "block":
+            assert_message = "quantizer_split_size required with block type"
+            assert quantizer_split_size is not None, assert_message
+            self.quantizer = QuantizerBlock1d(
                 channels=encoder_channels,
                 split_size=quantizer_split_size,
                 num_groups=quantizer_groups,
