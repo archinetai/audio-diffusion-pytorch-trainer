@@ -282,6 +282,7 @@ class QuantizationInfoLogger(Callback):
         self,
         sample_rate: int,
         patch_blocks: int,
+        patch_factor: int,
         split_size: int,
         num_residuals: int,
         num_groups: int,
@@ -292,7 +293,7 @@ class QuantizationInfoLogger(Callback):
     ):
         downsample_factors = downsample_factors[0:encoder_depth]
         encoder_downsample = reduce((lambda x, y: x * y), downsample_factors)
-        downsample_factor = (2 ** patch_blocks) * encoder_downsample
+        downsample_factor = (patch_factor ** patch_blocks) * encoder_downsample
 
         self.quantizer_type = quantizer_type
         self.tokens_per_second = 0.0
