@@ -1,0 +1,154 @@
+# @package _global_
+
+sampling_rate: 48000
+length: 524288
+channels: 2
+log_every_n_steps: 1000
+
+model:
+  _target_: main.module_base.Model
+  learning_rate: 1e-4
+  beta1: 0.9
+  beta2: 0.99
+  in_channels: ${channels}
+  channels: 256
+  patch_factor: 32
+  patch_blocks: 1
+  resnet_groups: 8
+  kernel_multiplier_downsample: 2
+  kernel_sizes_init: [1, 3, 7]
+  multipliers: [1, 2, 4, 4, 4, 4, 4]
+  factors: [4, 4, 4, 2, 2, 2]
+  num_blocks: [2, 2, 2, 2, 2, 2]
+  attentions: [False, False, False, True, True, True]
+  attention_heads: 8
+  attention_features: 128
+  attention_multiplier: 2
+  use_nearest_upsample: False
+  use_skip_scale: True
+  use_attention_bottleneck: True
+  diffusion_sigma_distribution:
+    _target_: audio_diffusion_pytorch.LogNormalDistribution
+    mean: -3.0
+    std: 1.0
+  diffusion_sigma_data: 0.1
+  diffusion_dynamic_threshold: 0.0
+
+datamodule:
+  _target_: main.module_base.Datamodule
+  dataset:
+    _target_: audio_data_pytorch.YoutubeDataset
+    urls:
+      - https://www.youtube.com/watch?v=F1gIsoIVQG8 # 2h Kiasmos
+      - https://www.youtube.com/watch?v=KjgluLOMa0k # 1h Techno Mix
+      - https://www.youtube.com/watch?v=c_iRx2Un07k # 1h Kygo Piano
+      - https://www.youtube.com/watch?v=fWRISvgAygU # 2h Chillstep
+      - https://www.youtube.com/watch?v=aJoo79OwZEI # 1h Drum and Bass
+      - https://www.youtube.com/watch?v=vnKKNZLVh2Q # 1h French 79
+      - https://www.youtube.com/watch?v=5gcyzjCLH90 # 1h Andrew Langdon
+      - https://www.youtube.com/watch?v=FFfdyV8gnWk # 1h City of Gamers
+      - https://www.youtube.com/watch?v=eqhQwgO03OE # 1h Lofi beats
+      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
+      - https://www.youtube.com/watch?v=W_cu3mS5UU4 # 1h Cyberpunk 2077
+      - https://www.youtube.com/watch?v=0mAzlQwIPQI # 2h Dark Techno
+      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
+      - https://www.youtube.com/watch?v=Et0bFcvSImY # 1.5h Worakls, N'to , Joachim Pastor Mix
+      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
+      - https://www.youtube.com/watch?v=yGsGdhe0pj8 # Piano Solo, 2h
+      - https://www.youtube.com/watch?v=PJL_mVgT0Ao # Piano Solo 6h
+      - https://www.youtube.com/watch?v=GuCqvjcZTKM # Einaudi, 2h
+      - https://www.youtube.com/watch?v=FccYUW91an8 # Mendelssohn, 4h
+      - https://www.youtube.com/watch?v=CuU9q2VKOyc # Baroque, 4h
+      - https://www.youtube.com/watch?v=7JynrZsIrgo # Chopin, 3h
+      - https://www.youtube.com/watch?v=_ioc6sdgugo # Bach, 1.2h
+      - https://www.youtube.com/watch?v=EhO_MrRfftU # 4h Mix piano
+      - https://www.youtube.com/watch?v=c_iRx2Un07k # 1h Kygo
+      - https://www.youtube.com/watch?v=cGYyOY4XaFs # 2.5h Mix
+      - https://www.youtube.com/watch?v=GDnU6nbL1uQ # 1.5h Avicii
+      - https://www.youtube.com/watch?v=_dmOgDlWAkU # 1h Einaudi Piano Only
+      - https://www.youtube.com/watch?v=E7EOjkGVmyo # 1h Jacobs
+      - https://www.youtube.com/watch?v=5yJOf1JJ5b8 # 1h Relax
+      - https://www.youtube.com/watch?v=4fezP875xOQ # 4h Chopin
+      - https://www.youtube.com/watch?v=5-Y35hjZ06E # 4h Schubert
+      - https://www.youtube.com/watch?v=cMzyLBuFm4A # 2h Yiurma
+      - https://www.youtube.com/watch?v=7UtIg4dOe84 # 3h, Hans Zimmer
+      - https://www.youtube.com/watch?v=DWDZSqBHW5g # 2h, Ludovico Einaudi
+      - https://www.youtube.com/watch?v=aVMkvCTT_yg # 1.5h, Ludwig Göransson
+      - https://www.youtube.com/watch?v=Et0bFcvSImY # 1.5h, Worakls, N'to , Joachim Pastor Mix
+      - https://www.youtube.com/watch?v=gThS-KfIxOs # 2h, Beatles
+      - https://www.youtube.com/watch?v=3jgH5weXYwA # 3h, 2022 Mix
+      - https://www.youtube.com/watch?v=6JQm5aSjX6g # 2h, Bach Mix
+      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
+      - https://www.youtube.com/watch?v=_3A4JW9RQWM # 1.5h Rock Mix
+      - https://www.youtube.com/watch?v=jgpJVI3tDbY # 3.5h Classical Mix
+      - https://www.youtube.com/watch?v=KjgluLOMa0k # 1h Techno Mix
+      - https://www.youtube.com/watch?v=zK3uaiVckEk # 1h Trap Mix
+      - https://www.youtube.com/watch?v=JQ1txLdu6qg # 1h Dubstep Mix
+    root: ${data_dir}
+    crop_length: 60 # seconds crops
+    transforms:
+      _target_: audio_data_pytorch.AllTransform
+      source_rate: 48000
+      target_rate: ${sampling_rate}
+      random_crop_size: ${length}
+      loudness: -20
+  val_split: 0.0005
+  batch_size: 32
+  num_workers: 8
+  pin_memory: True
+
+callbacks:
+  rich_progress_bar:
+    _target_: pytorch_lightning.callbacks.RichProgressBar
+
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "valid_loss"   # name of the logged metric which determines when model is improving
+    save_top_k: 1           # save k best models (determined by above metric)
+    save_last: True         # additionaly always save model from last epoch
+    mode: "min"             # can be "max" or "min"
+    verbose: False
+    dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
+    filename: '{epoch:02d}-{valid_loss:.3f}'
+
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
+
+  audio_samples_logger:
+    _target_: main.module_base.SampleLogger
+    num_items: 3
+    channels: ${channels}
+    sampling_rate: ${sampling_rate}
+    length: ${length}
+    sampling_steps: [3,5,10,25,50,100]
+    diffusion_sampler:
+      _target_: audio_diffusion_pytorch.ADPM2Sampler
+      rho: 1.0
+    diffusion_schedule:
+      _target_: audio_diffusion_pytorch.KarrasSchedule
+      sigma_min: 0.0001
+      sigma_max: 3.0
+      rho: 9.0
+
+loggers:
+  wandb:
+    _target_: pytorch_lightning.loggers.wandb.WandbLogger
+    project: ${oc.env:WANDB_PROJECT}
+    entity: ${oc.env:WANDB_ENTITY}
+    # offline: False  # set True to store all logs only locally
+    job_type: "train"
+    group: ""
+    save_dir: ${logs_dir}
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 0 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
+  precision: 32 # Precision used for tensors, default `32`
+  accelerator: null # `ddp` GPUs train individually and sync gradients, default `None`
+  min_epochs: 0
+  max_epochs: -1
+  enable_model_summary: False
+  log_every_n_steps: 1 # Logs metrics every N batches
+  check_val_every_n_epoch: null
+  val_check_interval: ${log_every_n_steps}
