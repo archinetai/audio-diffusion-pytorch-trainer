@@ -12,7 +12,7 @@ model:
   beta2: 0.99
   in_channels: ${channels}
   channels: 256
-  patch_factor: 16
+  patch_factor: 32
   patch_blocks: 1
   resnet_groups: 8
   kernel_multiplier_downsample: 2
