@@ -1,11 +1,9 @@
 # @package _global_
 
-# Test with length 65536, batch size 4, logger sampling_steps [3]
-
-sampling_rate: 48000
-length: 65536
+sampling_rate: 6000
+length: 262144
 channels: 2
-log_every_n_steps: 2000
+log_every_n_steps: 1000
 
 model:
   _target_: main.module_base.Model
@@ -13,7 +11,7 @@ model:
   beta1: 0.9
   beta2: 0.99
   in_channels: ${channels}
-  channels: 128
+  channels: 256
   patch_factor: 16
   patch_blocks: 1
   resnet_groups: 8
@@ -24,7 +22,7 @@ model:
   num_blocks: [2, 2, 2, 2, 2, 2]
   attentions: [False, False, False, True, True, True]
   attention_heads: 8
-  attention_features: 64
+  attention_features: 128
   attention_multiplier: 2
   use_nearest_upsample: False
   use_skip_scale: True
@@ -33,25 +31,24 @@ model:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
     std: 1.0
-  diffusion_sigma_data: 0.2
+  diffusion_sigma_data: 0.1
   diffusion_dynamic_threshold: 0.0
 
 datamodule:
   _target_: main.module_base.Datamodule
   dataset:
-    _target_: audio_data_pytorch.YoutubeDataset
-    urls:
-      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
-    root: ${data_dir}
-    crop_length: 12 # seconds crops
+    _target_: audio_data_pytorch.WAVDataset
+    recursive: True
+    sample_rate: ${sampling_rate}
     transforms:
       _target_: audio_data_pytorch.AllTransform
+      random_crop_size: ${length}
+      stereo: True
       source_rate: ${sampling_rate}
       target_rate: ${sampling_rate}
-      random_crop_size: ${length}
       loudness: -20
-  val_split: 0.01
-  batch_size: 4
+  val_split: 0.0005
+  batch_size: 32
   num_workers: 8
   pin_memory: True
 
@@ -75,11 +72,11 @@ callbacks:
 
   audio_samples_logger:
     _target_: main.module_base.SampleLogger
-    num_items: 4
+    num_items: 3
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [3]
+    sampling_steps: [3,5,10,25,50,100]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0

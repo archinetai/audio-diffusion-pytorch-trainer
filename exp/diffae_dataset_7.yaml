@@ -55,7 +55,6 @@ datamodule:
       source_rate: ${sampling_rate}
       target_rate: ${sampling_rate}
       loudness: -20
-
   val_split: 0.0005
   batch_size: 32
   num_workers: 8

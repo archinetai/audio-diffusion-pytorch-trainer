@@ -20,7 +20,8 @@ model:
   factor: ${upsampler_factors}
   in_channels: ${channels}
   channels: 128
-  patch_size: 16
+  patch_factor: 16
+  patch_blocks: 1
   resnet_groups: 8
   kernel_multiplier_downsample: 2
   kernel_sizes_init: [1, 3, 7]
