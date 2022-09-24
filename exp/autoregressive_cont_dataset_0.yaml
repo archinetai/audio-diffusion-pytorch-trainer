@@ -20,10 +20,10 @@ model:
     transformer:
       _target_: a_transformers_pytorch.transformers.Transformer
       features: 512
-      max_length: 512
+      max_length: 128
       num_layers: 12
       head_features: 64
-      num_heads: 12
+      num_heads: 20
       multiplier: 4
       causal: True
 

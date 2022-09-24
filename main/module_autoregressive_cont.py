@@ -260,7 +260,7 @@ class SampleLogger(Callback):
             sequence_length=length // 2,  # Autoregressively predict next half sequence
             keep_start=True,
         )
-        embedding_generated[:, -length:, :]
+        embedding_generated = embedding_generated[:, -length:, :]
 
         latent_generated = rearrange(embedding_generated, "b t c -> b c t")
 
