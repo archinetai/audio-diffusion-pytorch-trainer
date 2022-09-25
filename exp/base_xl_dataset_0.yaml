@@ -11,8 +11,8 @@ model:
   beta1: 0.9
   beta2: 0.99
   in_channels: ${channels}
-  channels: 512
-  patch_factor: 64
+  channels: 256
+  patch_factor: 32
   patch_blocks: 1
   resnet_groups: 8
   kernel_multiplier_downsample: 2
@@ -48,7 +48,7 @@ datamodule:
           target_rate: ${sampling_rate}
           loudness: -20
   val_split: 0.0005
-  batch_size: 4
+  batch_size: 8
   num_workers: 8
   pin_memory: True
 
@@ -107,4 +107,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
-  accumulate_grad_batches: 6
+  accumulate_grad_batches: 4
