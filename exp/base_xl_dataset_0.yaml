@@ -11,7 +11,7 @@ model:
   beta1: 0.9
   beta2: 0.99
   in_channels: ${channels}
-  channels: 256
+  channels: 320
   patch_factor: 32
   patch_blocks: 1
   resnet_groups: 8
@@ -48,7 +48,7 @@ datamodule:
           target_rate: ${sampling_rate}
           loudness: -20
   val_split: 0.0005
-  batch_size: 8
+  batch_size: 4
   num_workers: 8
   pin_memory: True
 
