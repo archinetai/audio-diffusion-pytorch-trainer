@@ -35,7 +35,6 @@ model:
   patch_factor: ${patch_factor}
   resnet_groups: 8
   kernel_multiplier_downsample: 2
-  kernel_sizes_init: [1, 3, 7]
   multipliers: [1, 2, 4, 4, 4, 4, 4]
   factors: ${factors}
   num_blocks: [2, 2, 2, 2, 2, 2]
