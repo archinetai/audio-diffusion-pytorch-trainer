@@ -39,13 +39,12 @@ model:
   multipliers: [1, 2, 4, 4, 4, 4, 4]
   factors: ${factors}
   num_blocks: [2, 2, 2, 2, 2, 2]
-  attentions: [False, False, False, True, True, True]
+  attentions: [0, 0, 0, 1, 1, 1, 1]
   attention_heads: 8
   attention_features: 64
   attention_multiplier: 2
   use_nearest_upsample: False
   use_skip_scale: True
-  use_attention_bottleneck: True
   diffusion_sigma_distribution:
     _target_: audio_diffusion_pytorch.LogNormalDistribution
     mean: -3.0
