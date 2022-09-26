@@ -6,7 +6,7 @@ log_every_n_steps: 1000
 channels: 2
 
 model:
-  _target_: main.module_diffqe.Model
+  _target_: main.module_qe.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
@@ -34,7 +34,7 @@ model:
       ema_decay: 0.95
 
 datamodule:
-  _target_: main.module_diffqe.Datamodule
+  _target_: main.module_qe.Datamodule
   dataset:
     _target_: audio_data_pytorch.LibriSpeechDataset
     root: ${data_dir}
@@ -69,7 +69,7 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_diffqe.SampleLogger
+    _target_: main.module_qe.SampleLogger
     num_items: 2
     channels: ${channels}
     sampling_rate: ${sampling_rate}
