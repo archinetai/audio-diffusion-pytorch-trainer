@@ -20,9 +20,9 @@ model:
     patch_factor: 16
     patch_blocks: 1
     resnet_groups: 8
-    multipliers: [1, 2, 4, 4, 4, 4, 4]
-    factors: [4, 4, 4, 2, 2, 2]
-    num_blocks: [2, 2, 2, 2, 2, 2]
+    multipliers: [1, 2, 4, 4, 4]
+    factors: [4, 4, 4, 2]
+    num_blocks: [2, 2, 2, 2]
     bottleneck:
       _target_: quantizer_pytorch.Quantizer1d
       channels: 512
