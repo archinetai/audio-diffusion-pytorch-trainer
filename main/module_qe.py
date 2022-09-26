@@ -27,6 +27,7 @@ class Model(pl.LightningModule):
         lr_beta1: float,
         lr_beta2: float,
         lr_weight_decay: float,
+        sample_rate: float,
         quantizer_loss_weight: float,
         autoencoder: nn.Module,
     ):
@@ -39,7 +40,10 @@ class Model(pl.LightningModule):
         self.quantizer_loss_weight = quantizer_loss_weight
 
         self.autoencoder: nn.Module = autoencoder
-        self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss()
+        # self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss()
+        self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
+            scale="mel", n_bins=64, sample_rate=sample_rate, device=self.device
+        )
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         z, info = self.autoencoder.encode(x, with_info=True)  # type: ignore
