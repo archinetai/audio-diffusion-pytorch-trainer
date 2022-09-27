@@ -3,15 +3,15 @@
 sampling_rate: 48000
 length: 65536
 channels: 2
-upsampler_factors: [2, 4, 8, 16, 32, 64, 128] # [24000Hz,...,375Hz]
+upsampler_factors: [2, 4] # [24000Hz,...,375Hz]
 log_every_n_steps: 1000
 
 model:
   _target_: main.module_upsampler.Model
   lr: 1e-4
   lr_beta1: 0.95
-  lr_eps: 1e-6
   lr_beta2: 0.999
+  lr_eps: 1e-6
   lr_weight_decay: 1e-3
   use_scheduler: False
   scheduler_inv_gamma: 20000.0
@@ -19,8 +19,8 @@ model:
   scheduler_warmup: 0.99
   factor: ${upsampler_factors}
   in_channels: ${channels}
-  channels: 128
-  patch_factor: 16
+  channels: 256
+  patch_factor: 32
   patch_blocks: 1
   resnet_groups: 8
   kernel_multiplier_downsample: 2
@@ -29,8 +29,8 @@ model:
   num_blocks: [2, 2, 2, 2, 2, 2]
   attentions: [0, 0, 0, 1, 1, 1, 1]
   attention_heads: 8
-  attention_features: 64
-  attention_multiplier: 2
+  attention_features: 128
+  attention_multiplier: 4
   use_nearest_upsample: False
   use_skip_scale: True
   diffusion_sigma_distribution:
@@ -53,6 +53,7 @@ datamodule:
       source_rate: ${sampling_rate}
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
+      stereo: True
       loudness: -20
   val_split: 0.01
   batch_size: 4

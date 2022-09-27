@@ -19,7 +19,7 @@ model:
   scheduler_warmup: 0.99
   factor: ${upsampler_factors}
   in_channels: ${channels}
-  channels: 320
+  channels: 256
   patch_factor: 32
   patch_blocks: 1
   resnet_groups: 8
