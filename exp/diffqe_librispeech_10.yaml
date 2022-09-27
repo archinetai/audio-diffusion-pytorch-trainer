@@ -14,7 +14,7 @@ encoder_depth: 4
 quantizer_type: timewise
 quantizer_split_size: null
 quantizer_codebook_size: 8192
-quantizer_num_residuals: 6
+quantizer_num_residuals: 7
 quantizer_num_groups: 1
 
 model:
