@@ -11,6 +11,7 @@ import torchaudio
 import wandb
 from audio_data_pytorch.utils import fractional_random_split
 from audio_diffusion_pytorch import AudioDiffusionUpsampler, Sampler, Schedule
+from audio_diffusion_pytorch.utils import downsample, upsample
 from einops import rearrange
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
@@ -267,10 +268,9 @@ class SampleLogger(Callback):
         # Compute and log downsampled waveforms
         factor = random.choice(self.factors)
         downsampled_rate = self.sampling_rate // factor
-        waveforms_downsampled = waveforms[:, :, ::factor]
+        waveforms_downsampled = downsample(waveforms, factor=factor)
         # We log an upsampled version since the player doesn't support low Hz rates
-        upsampler = torchaudio.transforms.Resample(downsampled_rate, self.sampling_rate)
-        waveforms_reupsampled = upsampler(waveforms_downsampled.cpu())
+        waveforms_reupsampled = upsample(waveforms_downsampled, factor=factor)
         log_wandb_audio_batch(
             logger=wandb_logger,
             id="downsampled",
