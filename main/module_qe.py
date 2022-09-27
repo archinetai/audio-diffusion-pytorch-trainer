@@ -42,13 +42,13 @@ class Model(pl.LightningModule):
 
         self.autoencoder = autoencoder
         self.loss_fn = None
-        self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss()
+        # self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss()
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        # if self.loss_fn is None:
-        #     self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
-        #         scale="mel", n_bins=64, sample_rate=self.sample_rate, device=self.device
-        #     )
+        if self.loss_fn is None:
+            self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
+                scale="mel", n_bins=64, sample_rate=self.sample_rate, device=self.device
+            )
         z, info = self.autoencoder.encode(x, with_info=True)  # type: ignore
         y = self.autoencoder.decode(z)  # type: ignore
         loss = self.loss_fn(x, y)  # type: ignore
