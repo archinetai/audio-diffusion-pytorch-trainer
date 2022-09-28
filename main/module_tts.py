@@ -302,9 +302,9 @@ class SampleLogger(Callback):
 
         texts = info["text"][0 : self.num_items]
 
-        text_table = wandb.Table(columns=["text"])
-        text_table.add_data(texts)
-        wandb_logger.log({"text": text_table})
+        # text_table = wandb.Table(columns=["text"])
+        # text_table.add_data(texts)
+        # wandb_logger.log({"text": text_table})
 
         noise = torch.randn(
             (self.num_items, self.channels, self.length), device=pl_module.device
