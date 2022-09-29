@@ -19,7 +19,7 @@ model:
     _target_: audio_diffusion_pytorch.AutoEncoder1d
     in_channels: ${channels}
     channels: 256
-    patch_factor: 16
+    patch_factor: 32
     patch_blocks: 1
     resnet_groups: 8
     multipliers: [1, 2, 4, 4, 4]
