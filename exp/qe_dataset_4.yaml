@@ -14,7 +14,7 @@ model:
   lr_weight_decay: 1e-3
   sample_rate: ${sampling_rate}
   quantizer_loss_weight: 0.01
-  loss_type: mrstft
+  loss_type: sdstft
 
   autoencoder:
     _target_: audio_diffusion_pytorch.AutoEncoder1d
