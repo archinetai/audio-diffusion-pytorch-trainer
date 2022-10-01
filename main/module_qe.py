@@ -40,6 +40,7 @@ class Model(pl.LightningModule):
         self.lr_weight_decay = lr_weight_decay
         self.sample_rate = sample_rate
         self.quantizer_loss_weight = quantizer_loss_weight
+        self.loss_type = loss_type
 
         self.autoencoder = autoencoder
         self.loss_fn = None
