@@ -56,6 +56,8 @@ class Model(pl.LightningModule):
                 )
             elif self.loss_type == "sdstft":
                 self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss()
+            elif self.loss_type == "mse":
+                self.loss_fn = nn.MSELoss()
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         self.init_loss_fn()
