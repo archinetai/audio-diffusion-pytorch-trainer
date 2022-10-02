@@ -25,12 +25,12 @@ model:
     resnet_groups: 8
     multipliers: [1, 2, 2]
     factors: [2, 2]
-    num_blocks: [6, 6]
+    num_blocks: [4, 4]
     bottleneck:
       _target_: quantizer_pytorch.Quantizer1d
       channels: 1024
       num_groups: 1
-      codebook_size: 4096
+      codebook_size: 2048
       num_residuals: 2
       expire_threshold: 0.05
       shared_codebook: False
