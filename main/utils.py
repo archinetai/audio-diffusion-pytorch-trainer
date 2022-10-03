@@ -3,6 +3,7 @@ import os
 import warnings
 from typing import Callable, List, Optional, Sequence
 
+import pkg_resources  # type: ignore
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
@@ -143,6 +144,8 @@ def log_hyperparameters(
     if "callbacks" in config:
         hparams["callbacks"] = config["callbacks"]
 
+    hparams["pacakges"] = get_packages_list()
+
     # send hparams to all loggers
     trainer.logger.log_hyperparams(hparams)
 
@@ -163,6 +166,10 @@ def finish(
             import wandb
 
             wandb.finish()
+
+
+def get_packages_list() -> List[str]:
+    return [f"{p.project_name}=={p.version}" for p in pkg_resources.working_set]
 
 
 def retry_if_error(fn: Callable, num_attemps: int = 10):
