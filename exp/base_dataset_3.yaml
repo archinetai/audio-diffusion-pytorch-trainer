@@ -1,5 +1,8 @@
 # @package _global_
 
+# 163M params
+# To pick dataset path execute with: ++datamodule.dataset.path=/your_wav_root/
+
 sampling_rate: 48000
 length: 524288
 channels: 2
