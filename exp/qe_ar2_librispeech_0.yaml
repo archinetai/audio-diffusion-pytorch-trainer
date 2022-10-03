@@ -1,0 +1,98 @@
+# @package _global_
+
+# Test with length 131072, batch size 4, logger sampling_steps [3]
+
+sampling_rate: 16000
+length: 131072
+channels: 2
+log_every_n_steps: 1000
+
+
+model:
+  _target_: main.module_qe_ar2.Model
+  lr: 1e-4
+  lr_beta1: 0.95
+  lr_beta2: 0.999
+  lr_eps: 1e-6
+  lr_weight_decay: 1e-3
+
+  autoencoder_path: null
+  codebook_size: 2048
+  num_residuals: 3
+  shared_codebook: False
+
+  transformer:
+    _target_: a_transformers_pytorch.transformers.Autoregressive
+    num_tokens: 6144
+    transformer:
+      _target_: a_transformers_pytorch.transformers.Transformer
+      features: 768
+      max_length: 192
+      num_layers: 8
+      head_features: 64
+      num_heads: 12
+      multiplier: 4
+      causal: True
+
+datamodule:
+  _target_: main.module_qe_ar2.Datamodule
+  dataset:
+    _target_: audio_data_pytorch.LibriSpeechDataset
+    root: ${data_dir}
+    transforms:
+      _target_: audio_data_pytorch.AllTransform
+      source_rate: 16000
+      target_rate: ${sampling_rate}
+      random_crop_size: ${length}
+      loudness: -20
+  val_split: 0.01
+  batch_size: 64
+  num_workers: 8
+  pin_memory: True
+
+callbacks:
+  rich_progress_bar:
+    _target_: pytorch_lightning.callbacks.RichProgressBar
+
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "valid_loss"   # name of the logged metric which determines when model is improving
+    save_top_k: 1           # save k best models (determined by above metric)
+    save_last: True         # additionaly always save model from last epoch
+    mode: "min"             # can be "max" or "min"
+    verbose: False
+    dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
+    filename: '{epoch:02d}-{valid_loss:.3f}'
+
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
+
+  audio_samples_logger:
+    _target_: main.module_qe_ar2.SampleLogger
+    num_items: 3
+    channels: ${channels}
+    sampling_rate: ${sampling_rate}
+    length: ${length}
+
+loggers:
+  wandb:
+    _target_: pytorch_lightning.loggers.wandb.WandbLogger
+    project: ${oc.env:WANDB_PROJECT}
+    entity: ${oc.env:WANDB_ENTITY}
+    # offline: False  # set True to store all logs only locally
+    job_type: "train"
+    group: ""
+    save_dir: ${logs_dir}
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 0 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
+  precision: 32 # Precision used for tensors, default `32`
+  accelerator: null # `ddp` GPUs train individually and sync gradients, default `None`
+  min_epochs: 0
+  max_epochs: -1
+  enable_model_summary: False
+  log_every_n_steps: 1 # Logs metrics every N batches
+  check_val_every_n_epoch: null
+  val_check_interval: ${log_every_n_steps}
