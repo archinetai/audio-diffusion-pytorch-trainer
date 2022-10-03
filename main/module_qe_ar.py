@@ -29,7 +29,9 @@ class Model(pl.LightningModule):
         lr_beta2: float,
         lr_weight_decay: float,
         autoencoder_path: str,  # Must be quantized
-        num_tokens: int,
+        codebook_size: int,
+        num_residuals: int,
+        shared_codebook: bool,
         max_length: int,
     ):
         super().__init__()
@@ -38,13 +40,17 @@ class Model(pl.LightningModule):
         self.lr_beta1 = lr_beta1
         self.lr_beta2 = lr_beta2
         self.lr_weight_decay = lr_weight_decay
-        self.num_residuals = None
+
+        self.num_residuals = num_residuals
+        self.shared_codebook = shared_codebook
+        self.codebook_size = codebook_size
+        self.num_tokens = codebook_size * (1 if shared_codebook else num_residuals)
 
         configuration = GPT2Config(
-            vocab_size=num_tokens + 1,
+            vocab_size=self.num_tokens + 1,
             n_positions=max_length,
-            bos_token_id=num_tokens,
-            eos_token_id=num_tokens,
+            bos_token_id=self.num_tokens,
+            eos_token_id=self.num_tokens,
         )
         self.transformer = GPT2LMHeadModel(configuration)
         self.autoencoder = torch.load(autoencoder_path, map_location=self.device)
@@ -53,17 +59,23 @@ class Model(pl.LightningModule):
     def encode(self, x: Tensor) -> Tensor:
         context, info = self.autoencoder.encode(x, with_info=True)
         # Encode indices sequentially
-        indices = rearrange(info["indices"], "b 1 k r -> b (k r)")  # b n
-        self.num_residuals = indices.shape[-1]
+        indices = info["indices"]
+        if not self.shared_codebook:
+            for i in range(1, self.num_residuals):
+                indices[:, :, :, i] = indices[:, :, :, i] + self.codebook_size * i
+        indices = rearrange(indices, "b 1 k r -> b (k r)")  # b n
         return indices
 
     @torch.no_grad()
-    def decode(self, indices: Tensor, **kwargs) -> Tensor:
+    def decode(self, indices: Tensor) -> Tensor:
         assert_message = "encode must be called once before decode to get num_residuals"
-        assert self.num_residuals is not None, assert_message
         indices = rearrange(indices, "b (k r) -> b 1 k r", r=self.num_residuals)
+        if not self.shared_codebook:
+            for i in range(1, self.num_residuals):
+                indices[:, :, :, i] = indices[:, :, :, i] - self.codebook_size * i
+        indices = indices.clamp(0, self.codebook_size - 1)
         latent = self.autoencoder.bottleneck.from_ids(indices)
-        return self.autoencoder.decode(latent, **kwargs)
+        return self.autoencoder.decode(latent)
 
     def forward(self, x: Tensor) -> Tensor:
         indices = self.encode(x)
@@ -218,24 +230,13 @@ def log_wandb_audio_spectrogram(
 
 class SampleLogger(Callback):
     def __init__(
-        self,
-        num_items: int,
-        channels: int,
-        sampling_rate: int,
-        length: int,
-        sampling_steps: List[int],
-        diffusion_schedule: Schedule,
-        diffusion_sampler: Sampler,
+        self, num_items: int, channels: int, sampling_rate: int, length: int
     ) -> None:
         self.num_items = num_items
         self.channels = channels
         self.sampling_rate = sampling_rate
         self.length = length
-        self.sampling_steps = sampling_steps
         self.epoch_count = 0
-
-        self.diffusion_schedule = diffusion_schedule
-        self.diffusion_sampler = diffusion_sampler
 
         self.log_next = False
 
@@ -274,6 +275,8 @@ class SampleLogger(Callback):
         )
 
         indices = pl_module.encode(x_true)
+
+        print(indices.shape)
         length = indices.shape[-1]
         indices_generated = pl_module.transformer.generate(
             input_ids=indices,
@@ -283,29 +286,20 @@ class SampleLogger(Callback):
             top_p=0.95,
         )[:, -length:]
 
-        for steps in self.sampling_steps:
+        samples = pl_module.decode(indices_generated)
 
-            samples = pl_module.decode(
-                indices_generated,
-                sampler=self.diffusion_sampler,
-                sigma_schedule=self.diffusion_schedule,
-                num_steps=steps,
-            )
-
-            log_wandb_audio_batch(
-                logger=wandb_logger,
-                id="recon",
-                samples=samples,
-                sampling_rate=self.sampling_rate,
-                caption=f"Sampled in {steps} steps",
-            )
-            log_wandb_audio_spectrogram(
-                logger=wandb_logger,
-                id="recon",
-                samples=samples,
-                sampling_rate=self.sampling_rate,
-                caption=f"Sampled in {steps} steps",
-            )
+        log_wandb_audio_batch(
+            logger=wandb_logger,
+            id="recon",
+            samples=samples,
+            sampling_rate=self.sampling_rate,
+        )
+        log_wandb_audio_spectrogram(
+            logger=wandb_logger,
+            id="recon",
+            samples=samples,
+            sampling_rate=self.sampling_rate,
+        )
 
         if is_train:
             pl_module.train()

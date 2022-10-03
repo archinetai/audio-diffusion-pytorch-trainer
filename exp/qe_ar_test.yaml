@@ -1,43 +1,29 @@
 # @package _global_
 
+# Test with length 131072, batch size 4, logger sampling_steps [3]
+
 sampling_rate: 16000
 length: 131072
-log_every_n_steps: 1000
 channels: 2
+log_every_n_steps: 1000
+
 
 model:
-  _target_: main.module_qe.Model
+  _target_: main.module_qe_ar.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
-  sample_rate: ${sampling_rate}
-  quantizer_loss_weight: 1e-5
-  loss_type: mrstft
 
-  autoencoder:
-    _target_: audio_diffusion_pytorch.AutoEncoder1d
-    in_channels: ${channels}
-    channels: 256
-    patch_factor: 16
-    patch_blocks: 1
-    resnet_groups: 8
-    multipliers: [1, 2, 4, 4, 4]
-    factors: [4, 4, 4, 2]
-    num_blocks: [3, 3, 3, 3]
-    bottleneck:
-      _target_: quantizer_pytorch.Quantizer1d
-      channels: 1024
-      num_groups: 1
-      codebook_size: 2048
-      num_residuals: 3
-      expire_threshold: 0.05
-      shared_codebook: False
-      ema_decay: 0.95
+  autoencoder_path: null
+  codebook_size: 2048
+  num_residuals: 3
+  shared_codebook: False
+  max_length: 1024
 
 datamodule:
-  _target_: main.module_qe.Datamodule
+  _target_: main.module_qe_ar.Datamodule
   dataset:
     _target_: audio_data_pytorch.YoutubeDataset
     urls:
@@ -52,7 +38,7 @@ datamodule:
       stereo: True
       loudness: -20
   val_split: 0.01
-  batch_size: 2
+  batch_size: 4
   num_workers: 8
   pin_memory: True
 
@@ -75,8 +61,8 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_qe.SampleLogger
-    num_items: 2
+    _target_: main.module_qe_ar.SampleLogger
+    num_items: 3
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
