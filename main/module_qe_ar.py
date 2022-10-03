@@ -284,7 +284,7 @@ class SampleLogger(Callback):
             do_sample=True,
             top_k=50,
             top_p=0.95,
-        )[:, -length:]
+        )
 
         samples = pl_module.decode(indices_generated)
 

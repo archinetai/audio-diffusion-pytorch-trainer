@@ -20,7 +20,7 @@ model:
   codebook_size: 2048
   num_residuals: 3
   shared_codebook: False
-  max_length: 1024
+  max_length: 384
 
 datamodule:
   _target_: main.module_qe_ar.Datamodule
