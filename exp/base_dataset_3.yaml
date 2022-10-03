@@ -1,7 +1,7 @@
 # @package _global_
 
 sampling_rate: 48000
-length: 262144
+length: 524288
 channels: 2
 log_every_n_steps: 1000
 
@@ -10,27 +10,32 @@ model:
   learning_rate: 1e-4
   beta1: 0.9
   beta2: 0.99
-  in_channels: ${channels}
-  channels: 256
-  patch_factor: 32
-  patch_blocks: 1
-  resnet_groups: 8
-  kernel_multiplier_downsample: 2
-  multipliers: [1, 2, 4, 4, 4, 4, 4]
-  factors: [4, 4, 4, 2, 2, 2]
-  num_blocks: [2, 2, 2, 2, 2, 2]
-  attentions: [0, 0, 0, 1, 1, 1, 1]
-  attention_heads: 8
-  attention_features: 128
-  attention_multiplier: 2
-  use_nearest_upsample: False
-  use_skip_scale: True
-  diffusion_sigma_distribution:
-    _target_: audio_diffusion_pytorch.LogNormalDistribution
-    mean: -3.0
-    std: 1.0
-  diffusion_sigma_data: 0.1
-  diffusion_dynamic_threshold: 0.0
+  ema_beta: 0.9999
+  ema_power: 0.7
+
+  model:
+    _target_: audio_diffusion_pytorch.AudioDiffusionModel
+    in_channels: ${channels}
+    channels: 160
+    patch_factor: 16
+    patch_blocks: 1
+    resnet_groups: 8
+    kernel_multiplier_downsample: 2
+    multipliers: [1, 2, 4, 4, 4, 4, 4]
+    factors: [4, 4, 4, 2, 2, 2]
+    num_blocks: [2, 2, 2, 2, 2, 2]
+    attentions: [0, 0, 0, 1, 1, 1, 1]
+    attention_heads: 8
+    attention_features: 64
+    attention_multiplier: 2
+    use_nearest_upsample: False
+    use_skip_scale: True
+    diffusion_sigma_distribution:
+      _target_: audio_diffusion_pytorch.LogNormalDistribution
+      mean: -3.0
+      std: 1.0
+    diffusion_sigma_data: 0.2
+    diffusion_dynamic_threshold: 0.0
 
 datamodule:
   _target_: main.module_base.Datamodule

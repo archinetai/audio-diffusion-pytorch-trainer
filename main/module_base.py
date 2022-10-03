@@ -1,13 +1,18 @@
 from typing import Any, Callable, List, Optional
 
+import librosa
+import plotly.graph_objs as go
 import pytorch_lightning as pl
 import torch
+import torchaudio
 import wandb
 from audio_data_pytorch.utils import fractional_random_split
 from audio_diffusion_pytorch import AudioDiffusionModel, Sampler, Schedule
 from einops import rearrange
+from ema_pytorch import EMA
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
+from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 """ Model """
@@ -15,13 +20,20 @@ from torch.utils.data import DataLoader
 
 class Model(pl.LightningModule):
     def __init__(
-        self, learning_rate: float, beta1: float, beta2: float, *args, **kwargs
+        self,
+        learning_rate: float,
+        beta1: float,
+        beta2: float,
+        ema_beta: float,
+        ema_power: float,
+        model: nn.Module,
     ):
         super().__init__()
         self.learning_rate = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2
-        self.model = AudioDiffusionModel(*args, **kwargs)
+        self.model = model
+        self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
 
     @property
     def device(self):
@@ -29,7 +41,7 @@ class Model(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
-            list(self.parameters()),
+            list(self.model.parameters()),
             lr=self.learning_rate,
             betas=(self.beta1, self.beta2),
         )
@@ -39,11 +51,14 @@ class Model(pl.LightningModule):
         waveforms = batch
         loss = self.model(waveforms)
         self.log("train_loss", loss)
+        # Update EMA model and log decay
+        self.model_ema.update()
+        self.log("ema_decay", self.model_ema.get_current_decay())
         return loss
 
     def validation_step(self, batch, batch_idx):
         waveforms = batch
-        loss = self.model(waveforms)
+        loss = self.model_ema(waveforms)
         self.log("valid_loss", loss)
         return loss
 
@@ -112,6 +127,58 @@ def get_wandb_logger(trainer: Trainer) -> Optional[WandbLogger]:
     return None
 
 
+def log_wandb_audio_batch(
+    logger: WandbLogger, id: str, samples: Tensor, sampling_rate: int, caption: str = ""
+):
+    num_items = samples.shape[0]
+    samples = rearrange(samples, "b c t -> b t c").detach().cpu().numpy()
+    logger.log(
+        {
+            f"sample_{idx}_{id}": wandb.Audio(
+                samples[idx],
+                caption=caption,
+                sample_rate=sampling_rate,
+            )
+            for idx in range(num_items)
+        }
+    )
+
+
+def log_wandb_audio_spectrogram(
+    logger: WandbLogger, id: str, samples: Tensor, sampling_rate: int, caption: str = ""
+):
+    num_items = samples.shape[0]
+    samples = samples.detach().cpu()
+    transform = torchaudio.transforms.MelSpectrogram(
+        sample_rate=sampling_rate,
+        n_fft=1024,
+        hop_length=512,
+        n_mels=80,
+        center=True,
+        norm="slaney",
+    )
+
+    def get_spectrogram_image(x):
+        spectrogram = transform(x[0])
+        image = librosa.power_to_db(spectrogram)
+        trace = [go.Heatmap(z=image, colorscale="viridis")]
+        layout = go.Layout(
+            yaxis=dict(title="Mel Bin (Log Frequency)"),
+            xaxis=dict(title="Frame"),
+            title_text=caption,
+            title_font_size=10,
+        )
+        fig = go.Figure(data=trace, layout=layout)
+        return fig
+
+    logger.log(
+        {
+            f"mel_spectrogram_{idx}_{id}": get_spectrogram_image(samples[idx])
+            for idx in range(num_items)
+        }
+    )
+
+
 class SampleLogger(Callback):
     def __init__(
         self,
@@ -150,7 +217,7 @@ class SampleLogger(Callback):
             pl_module.eval()
 
         wandb_logger = get_wandb_logger(trainer).experiment
-        model = pl_module.model
+        model = pl_module.model_ema.ema_model
 
         # Get start diffusion noise
         noise = torch.randn(
@@ -158,24 +225,25 @@ class SampleLogger(Callback):
         )
 
         for steps in self.sampling_steps:
-
             samples = model.sample(
                 noise=noise,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,
             )
-            samples = rearrange(samples, "b c t -> b t c").detach().cpu().numpy()
-
-            wandb_logger.log(
-                {
-                    f"sample_{idx}_{steps}": wandb.Audio(
-                        samples[idx],
-                        caption=f"Sampled in {steps} steps",
-                        sample_rate=self.sampling_rate,
-                    )
-                    for idx in range(self.num_items)
-                }
+            log_wandb_audio_batch(
+                logger=wandb_logger,
+                id="sample",
+                samples=samples,
+                sampling_rate=self.sampling_rate,
+                caption=f"Sampled in {steps} steps",
+            )
+            log_wandb_audio_spectrogram(
+                logger=wandb_logger,
+                id="sample",
+                samples=samples,
+                sampling_rate=self.sampling_rate,
+                caption=f"Sampled in {steps} steps",
             )
 
         if is_train:
