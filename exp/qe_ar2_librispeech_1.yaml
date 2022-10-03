@@ -26,7 +26,7 @@ model:
     num_tokens: 6144
     transformer:
       _target_: a_transformers_pytorch.transformers.TransformerShifter
-        transformer:
+      transformer:
         _target_: a_transformers_pytorch.transformers.Transformer
         features: 768
         max_length: 192
