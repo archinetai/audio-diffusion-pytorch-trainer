@@ -44,7 +44,7 @@ datamodule:
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
       loudness: -20
-  val_split: 0.01
+  val_split: 0.001
   batch_size: 64
   num_workers: 8
   pin_memory: True
