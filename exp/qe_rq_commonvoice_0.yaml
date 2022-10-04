@@ -23,7 +23,7 @@ model:
     num_tokens: 2048
     shared_codebook: False
     features: 1024
-    max_length: 96
+    max_length: 192
     max_residuals: 3
     num_layers: 12
     head_features: 64
