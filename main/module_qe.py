@@ -74,12 +74,14 @@ class Model(pl.LightningModule):
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"train_perplexity_{i}", perplexity)
         # Log replaced codes of each codebook used
-        for i, replaced_codes in enumerate(info["replaced_codes"]):
-            self.log(f"train_replaced_codes_{i}", replaced_codes)
+        if "replaced_codes" in info:
+            for i, replaced_codes in enumerate(info["replaced_codes"]):
+                self.log(f"train_replaced_codes_{i}", replaced_codes)
         # Log commitment loss
-        commitment_loss = info["loss"]
-        loss += self.quantizer_loss_weight * commitment_loss
-        self.log("train_commitment_loss", commitment_loss)
+        if "loss" in info:
+            commitment_loss = info["loss"]
+            loss += self.quantizer_loss_weight * commitment_loss
+            self.log("train_commitment_loss", commitment_loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
