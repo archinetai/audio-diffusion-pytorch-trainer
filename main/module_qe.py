@@ -92,9 +92,10 @@ class Model(pl.LightningModule):
         for i, perplexity in enumerate(info["perplexity"]):
             self.log(f"valid_perplexity_{i}", perplexity)
 
-        commitment_loss = info["loss"]
-        loss += self.quantizer_loss_weight * commitment_loss
-        self.log("valid_commitment_loss", commitment_loss)
+        if "loss" in info:
+            commitment_loss = info["loss"]
+            loss += self.quantizer_loss_weight * commitment_loss
+            self.log("valid_commitment_loss", commitment_loss)
 
         return loss
 
