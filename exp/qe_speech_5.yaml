@@ -31,7 +31,7 @@ model:
       channels: 512
       codebook_size: 4096
       num_overlaps: 2
-      temperature: 1.0
+      temperature: 5.0
 
 
 datamodule:
