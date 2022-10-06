@@ -286,7 +286,7 @@ class SampleLogger(Callback):
 
         length = indices.shape[1]
         indices_generated = pl_module.transformer_decoder.generate(
-            indices,
+            indices[:, 0:1],  # Provide first two time tokens
             sequence_length=length,  # Autoregressively predict another full sequence
             context=embedding,
         )
