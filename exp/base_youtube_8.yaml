@@ -103,7 +103,7 @@ datamodule:
       source_rate: 48000
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
-      #loudness: -20
+      loudness: -20
   val_split: 0.0005
   batch_size: 32
   num_workers: 8
