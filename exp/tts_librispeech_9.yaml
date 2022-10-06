@@ -63,7 +63,7 @@ datamodule:
       crop_size: ${length}
       loudness: -20
   val_split: 0.001
-  batch_size: 64
+  batch_size: 16
   num_workers: 8
   pin_memory: True
 
