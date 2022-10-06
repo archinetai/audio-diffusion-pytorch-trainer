@@ -23,7 +23,7 @@ model:
     patch_factor: 32
     patch_blocks: 1
     resnet_groups: 8
-    multipliers: [1, 2, 2, 1]
+    multipliers: [1, 1, 2, 1]
     factors: [2, 2, 1]
     num_blocks: [4, 6, 6]
     bottleneck:
