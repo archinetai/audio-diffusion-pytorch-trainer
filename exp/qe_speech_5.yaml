@@ -25,7 +25,7 @@ model:
     resnet_groups: 8
     multipliers: [1, 1, 2, 2]
     factors: [2, 4, 4]
-    num_blocks: [4, 4, 4, 4]
+    num_blocks: [8, 8, 8, 8]
     bottleneck:
       _target_: quantizer_pytorch.quantizer.MQ1d
       channels: 512
