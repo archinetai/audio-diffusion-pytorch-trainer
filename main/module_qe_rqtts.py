@@ -286,10 +286,13 @@ class SampleLogger(Callback):
 
         length = indices.shape[1]
         indices_generated = pl_module.transformer_decoder.generate(
-            indices[:, 0:1],  # Provide first two time tokens
+            start_tokens=indices[:, 0:1],  # Provide first two time tokens
             sequence_length=length,  # Autoregressively predict another full sequence
             context=embedding,
+            keep_start=True,
         )
+
+        print(indices[:, 0:1].shape, length, indices.shape, indices_generated.shape)
 
         samples = pl_module.decode_audio(indices_generated)
 
