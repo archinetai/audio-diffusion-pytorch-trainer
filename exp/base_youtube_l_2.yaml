@@ -9,9 +9,11 @@ log_every_n_steps: 1000
 
 model:
   _target_: main.module_base.Model
-  learning_rate: 1e-4
-  beta1: 0.9
-  beta2: 0.99
+  lr: 1e-4
+  lr_beta1: 0.95
+  lr_beta2: 0.999
+  lr_eps: 1e-6
+  lr_weight_decay: 1e-3
   ema_beta: 0.9999
   ema_power: 0.7
 

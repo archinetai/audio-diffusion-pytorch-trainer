@@ -21,17 +21,21 @@ from torch.utils.data import DataLoader
 class Model(pl.LightningModule):
     def __init__(
         self,
-        learning_rate: float,
-        beta1: float,
-        beta2: float,
+        lr: float,
+        lr_beta1: float,
+        lr_beta2: float,
+        lr_eps: float,
+        lr_weight_decay: float,
         ema_beta: float,
         ema_power: float,
         model: nn.Module,
     ):
         super().__init__()
-        self.learning_rate = learning_rate
-        self.beta1 = beta1
-        self.beta2 = beta2
+        self.lr = lr
+        self.lr_beta1 = lr_beta1
+        self.lr_beta2 = lr_beta2
+        self.lr_eps = lr_eps
+        self.lr_weight_decay = lr_weight_decay
         self.model = model
         self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
 
@@ -40,10 +44,12 @@ class Model(pl.LightningModule):
         return next(self.model.parameters()).device
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             list(self.model.parameters()),
-            lr=self.learning_rate,
-            betas=(self.beta1, self.beta2),
+            lr=self.lr,
+            betas=(self.lr_beta1, self.lr_beta2),
+            eps=self.lr_eps,
+            weight_decay=self.lr_weight_decay,
         )
         return optimizer
 
