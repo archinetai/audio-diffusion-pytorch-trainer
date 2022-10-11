@@ -1,13 +1,15 @@
 # @package _global_
 
 sampling_rate: 48000
-length: 65536
-channels: 2
-upsampler_factors: [2, 4] # [24000Hz,...,375Hz]
+length: 262144
+channels: 1
 log_every_n_steps: 1000
 
+encoder_max_length: 512
+encoder_features: 768
+
 model:
-  _target_: main.module_upsampler.Model
+  _target_: main.module_diff_textcond.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
@@ -16,55 +18,89 @@ model:
   ema_beta: 0.9999
   ema_power: 0.7
 
-  upsampler:
-    _target_: audio_diffusion_pytorch.AudioDiffusionUpsampler
-    factor: ${upsampler_factors}
-    factor_features: 128
+  model:
+    _target_: audio_diffusion_pytorch.AudioDiffusionConditional
     in_channels: ${channels}
-    channels: 256
-    patch_factor: 32
+    channels: 160
+    patch_factor: 16
     patch_blocks: 1
     resnet_groups: 8
     kernel_multiplier_downsample: 2
     multipliers: [1, 2, 4, 4, 4, 4, 4]
-    factors: [2, 2, 2, 2, 2, 2]
+    factors: [4, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 2, 2]
-    attentions: [0, 0, 0, 0, 1, 1, 1]
+    attentions: [0, 0, 0, 1, 1, 1, 1]
     attention_heads: 8
-    attention_features: 128
-    attention_multiplier: 4
+    attention_features: 64
+    attention_multiplier: 2
     use_nearest_upsample: False
     use_skip_scale: True
     diffusion_sigma_distribution:
       _target_: audio_diffusion_pytorch.VDistribution
+    embedding_max_length: ${encoder_max_length}
+    embedding_features: ${encoder_features}
+    embedding_mask_proba: 0.1
+
+  tokenizer: t5-base
+  encoder_num_tokens: 32128 # T5 vocab size
+  encoder_features: ${encoder_features}
+  encoder_max_length: ${encoder_max_length}
+
+  encoder:
+    _target_: a_transformers_pytorch.transformers.Transformer
+    features: 768
+    max_length: 512
+    num_layers: 8
+    head_features: 64
+    num_heads: 8
+    multiplier: 4
+
+
+batch_size: 4
 
 datamodule:
-  _target_: main.module_upsampler.Datamodule
-  dataset:
-    _target_: audio_data_pytorch.YoutubeDataset
-    urls:
-      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
+  _target_: main.module_diff_textcond.Datamodule
+
+  dataset_train:
+    _target_: audio_data_pytorch.ClothoDataset
     root: ${data_dir}
-    crop_length: 12 # seconds crops
+    split: train
+    batch_size: ${batch_size}
+    preprocess_sample_rate: 48000
+    preprocess_transforms:
+      _target_: audio_data_pytorch.AllTransform
+      crop_size: 480000
+      stereo: True
     transforms:
       _target_: audio_data_pytorch.AllTransform
-      source_rate: ${sampling_rate}
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
-      stereo: True
+      mono: True
       loudness: -20
-  val_split: 0.01
-  batch_size: 4
+
+  dataset_valid:
+    _target_: audio_data_pytorch.ClothoDataset
+    root: ${data_dir}
+    split: valid
+    batch_size: ${batch_size}
+    preprocess_sample_rate: 48000
+    preprocess_transforms:
+      _target_: audio_data_pytorch.AllTransform
+      crop_size: 480000
+      stereo: True
+    transforms:
+      _target_: audio_data_pytorch.AllTransform
+      target_rate: ${sampling_rate}
+      random_crop_size: ${length}
+      mono: True
+      loudness: -20
+
   num_workers: 8
   pin_memory: True
 
 callbacks:
   rich_progress_bar:
     _target_: pytorch_lightning.callbacks.RichProgressBar
-
-  model_summary:
-    _target_: pytorch_lightning.callbacks.RichModelSummary
-    max_depth: 2
 
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint
@@ -76,24 +112,26 @@ callbacks:
     dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
 
-  learning_rate_monitor:
-    _target_: pytorch_lightning.callbacks.LearningRateMonitor
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_upsampler.SampleLogger
+    _target_: main.module_diff_textcond.SampleLogger
     num_items: 3
-    factor: ${upsampler_factors}
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [1,2]
+    sampling_steps: [3]
+    embedding_scale: 7.0
+    use_ema_model: False
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.ADPM2Sampler
       rho: 1.0
     diffusion_schedule:
       _target_: audio_diffusion_pytorch.KarrasSchedule
       sigma_min: 0.0001
-      sigma_max: 3.0
+      sigma_max: 5.0
       rho: 9.0
 
 loggers:
@@ -116,4 +154,5 @@ trainer:
   enable_model_summary: False
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
+  limit_val_batches: 20
   val_check_interval: ${log_every_n_steps}
