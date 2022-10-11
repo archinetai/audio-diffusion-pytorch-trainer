@@ -66,9 +66,7 @@ class Model(pl.LightningModule):
             max_length=self.max_length,
             truncation=True,
         )
-        print(texts)
         tokens = encoded["input_ids"].to(self.device)
-        print(tokens)
         # mask = encoded["attention_mask"].to(self.device).bool()
         # Compute embedding
         embedding = self.to_embedding(tokens)

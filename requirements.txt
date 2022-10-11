@@ -16,6 +16,7 @@ librosa
 transformers
 eng-to-ipa
 ema-pytorch
+py7zr
 
 audio-diffusion-pytorch
 audio-data-pytorch
