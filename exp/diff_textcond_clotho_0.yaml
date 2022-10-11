@@ -29,7 +29,7 @@ model:
     multipliers: [1, 2, 4, 4, 4, 4, 4]
     factors: [4, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 2, 2]
-    attentions: [0, 0, 0, 1, 1, 1, 1]
+    attentions: [0, 0, 0, 0, 1, 1, 1]
     attention_heads: 8
     attention_features: 64
     attention_multiplier: 2
