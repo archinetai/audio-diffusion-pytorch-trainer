@@ -49,7 +49,7 @@ model:
   encoder:
     _target_: a_transformers_pytorch.transformers.Transformer
     features: 768
-    max_length: 512
+    max_length: 64
     num_layers: 8
     head_features: 64
     num_heads: 8
