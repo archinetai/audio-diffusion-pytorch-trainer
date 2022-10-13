@@ -28,7 +28,7 @@ model:
     multipliers: [1, 2, 4, 4, 4, 4, 4]
     factors: [2, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 2, 2]
-    attentions: [0, 0, 0, 1, 1, 1, 1]
+    attentions: [0, 0, 0, 0, 1, 1, 1]
     attention_heads: 16
     attention_features: 128
     attention_multiplier: 4
@@ -105,7 +105,7 @@ datamodule:
       random_crop_size: ${length}
       loudness: -20
   val_split: 0.0005
-  batch_size: 20
+  batch_size: 8
   num_workers: 8
   pin_memory: True
 
@@ -164,4 +164,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 2
