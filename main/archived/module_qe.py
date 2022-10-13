@@ -45,22 +45,25 @@ class Model(pl.LightningModule):
         self.autoencoder = autoencoder
         self.loss_fn = None
 
-    def init_loss_fn(self):
-        if self.loss_fn is None:
-            if self.loss_type == "mrstft":
-                self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
-                    scale="mel",
-                    n_bins=64,
-                    sample_rate=self.sample_rate,
-                    device=self.device,
-                )
-            elif self.loss_type == "sdstft":
-                self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss()
-            elif self.loss_type == "mse":
-                self.loss_fn = nn.MSELoss()
+    def setup(self, stage):
+        if self.loss_type == "mrstft":
+            self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
+                sample_rate=self.sample_rate,
+                device=self.device,
+            )
+        elif self.loss_type == "sdstft":
+            scales = [2048, 1024, 512, 256, 128]
+            hop_sizes, win_lengths, overlap = [], [], 0.75
+            for scale in scales:
+                hop_sizes += [int(scale * (1.0 - overlap))]
+                win_lengths += [scale]
+            self.loss_fn = auraloss.freq.SumAndDifferenceSTFTLoss(
+                fft_sizes=scales, hop_sizes=hop_sizes, win_lengths=win_lengths
+            )
+        elif self.loss_type == "mse":
+            self.loss_fn = nn.MSELoss()
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        self.init_loss_fn()
         z, info = self.autoencoder.encode(x, with_info=True)  # type: ignore
         y = self.autoencoder.decode(z)  # type: ignore
         loss = self.loss_fn(x, y)  # type: ignore
