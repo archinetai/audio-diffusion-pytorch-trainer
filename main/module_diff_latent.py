@@ -74,7 +74,7 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x = batch
         z = self.encode_latent(x)
-        loss = self.model_ema(waveforms)
+        loss = self.model_ema(z)
         self.log("valid_loss", loss)
         return loss
 
@@ -205,6 +205,7 @@ class SampleLogger(Callback):
         sampling_steps: List[int],
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
+        use_ema_model: bool,
     ) -> None:
         self.num_items = num_items
         self.channels = channels
@@ -213,6 +214,7 @@ class SampleLogger(Callback):
         self.sampling_steps = sampling_steps
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
+        self.use_ema_model = use_ema_model
 
         self.log_next = False
 
@@ -242,6 +244,9 @@ class SampleLogger(Callback):
         noise = torch.randn(
             (self.num_items, self.channels, self.length), device=pl_module.device
         )
+        # I know, ugly.
+        z = pl_module.encode_latent(noise)
+        noise = torch.randn_like(z)
 
         for steps in self.sampling_steps:
             z_samples = diffusion_model.sample(
