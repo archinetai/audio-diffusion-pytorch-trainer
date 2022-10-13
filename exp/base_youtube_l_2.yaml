@@ -34,6 +34,7 @@ model:
     attention_multiplier: 4
     use_nearest_upsample: False
     use_skip_scale: True
+    diffusion_type: v
     diffusion_sigma_distribution:
       _target_: audio_diffusion_pytorch.VDistribution
 
@@ -133,6 +134,7 @@ callbacks:
     sampling_rate: ${sampling_rate}
     length: ${length}
     sampling_steps: [3,5,10,25,50,100]
+    use_ema_model: True
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.AEulerSampler
     diffusion_schedule:

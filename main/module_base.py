@@ -195,6 +195,7 @@ class SampleLogger(Callback):
         sampling_steps: List[int],
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
+        use_ema_model: bool,
     ) -> None:
         self.num_items = num_items
         self.channels = channels
@@ -203,6 +204,7 @@ class SampleLogger(Callback):
         self.sampling_steps = sampling_steps
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
+        self.use_ema_model = use_ema_model
 
         self.log_next = False
 
@@ -223,7 +225,10 @@ class SampleLogger(Callback):
             pl_module.eval()
 
         wandb_logger = get_wandb_logger(trainer).experiment
-        model = pl_module.model_ema.ema_model
+
+        diffusion_model = pl_module.model
+        if self.use_ema_model:
+            diffusion_model = pl_module.model_ema.ema_model
 
         # Get start diffusion noise
         noise = torch.randn(
@@ -231,7 +236,7 @@ class SampleLogger(Callback):
         )
 
         for steps in self.sampling_steps:
-            samples = model.sample(
+            samples = diffusion_model.sample(
                 noise=noise,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
