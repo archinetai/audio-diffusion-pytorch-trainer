@@ -38,7 +38,7 @@ model:
 
 
 datamodule:
-  _target_: main.module_upsampler.Datamodule
+  _target_: main.module_ae.Datamodule
   dataset:
     _target_: audio_data_pytorch.WAVDataset
     recursive: True
