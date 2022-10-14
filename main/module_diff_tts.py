@@ -82,9 +82,9 @@ class Model(pl.LightningModule):
         attn = sim.softmax(dim=-1, dtype=torch.float32)
         # Compute encoded speech/text aligned encoding
         speech_encoding = einsum("b n m, b m d -> b n d", attn, text_embedding)
-        speech_encoded = self.speech_encoder(speech_encoding)
+        # speech_encoded = self.speech_encoder(speech_encoding)
         # Transpose to channels
-        channels = rearrange(speech_encoded, "b n d -> b d n")
+        channels = rearrange(speech_encoding, "b n d -> b d n")
         return (channels, dict(alignment=attn)) if with_info else channels
 
     def configure_optimizers(self):
