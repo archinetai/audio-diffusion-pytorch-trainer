@@ -36,6 +36,7 @@ class Model(pl.LightningModule):
         text_embedding: nn.Module,
         text_encoder: nn.Module,
         speech_posemb: nn.Module,
+        speech_encoder: nn.Module,
     ):
         super().__init__()
         self.lr = lr
@@ -51,6 +52,7 @@ class Model(pl.LightningModule):
         self.text_embedding = text_embedding
         self.text_encoder = text_encoder
         self.speech_posemb = speech_posemb
+        self.speech_encoder = speech_encoder
 
     @property
     def device(self):
@@ -70,9 +72,9 @@ class Model(pl.LightningModule):
         tokens = encoded["input_ids"].to(self.device)
         # mask = encoded["attention_mask"].to(self.device).bool()
         # Compute embedding
-        text_embedding_in = self.text_embedding(tokens)
+        text_embedding = self.text_embedding(tokens)
         # Encode with transformer
-        text_embedding = self.text_encoder(text_embedding_in)
+        text_embedding = self.text_encoder(text_embedding) + text_embedding
         # Encode audio
         speech_embedding = rearrange(
             self.autoencoder.encode(waveforms), "b d n -> b n d"  # type: ignore
@@ -83,7 +85,7 @@ class Model(pl.LightningModule):
         attn = sim.softmax(dim=-1, dtype=torch.float32)
         # Compute encoded speech/text aligned encoding
         speech_encoding = einsum("b n m, b m d -> b n d", attn, text_embedding)
-        # speech_encoded = self.speech_encoder(speech_encoding)
+        speech_encoding = self.speech_encoder(speech_encoding)
         # Transpose to channels
         channels = rearrange(speech_encoding, "b n d -> b d n")
         return (channels, dict(alignment=attn)) if with_info else channels
@@ -317,7 +319,9 @@ class SampleLogger(Callback):
         )
 
         log_wandb_embeddings(
-            logger=wandb_logger, id="alignment", embeddings=info["alignment"]
+            logger=wandb_logger,
+            id="alignment",
+            embeddings=rearrange(info["alignment"], "b n m -> b m n"),
         )
 
         noise = torch.randn(
