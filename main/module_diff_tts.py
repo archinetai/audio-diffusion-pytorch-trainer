@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 import torch
 import torchaudio
 import wandb
-from a_transformers_pytorch.transformers import Transformer
+from a_transformers_pytorch.transformers import AbsolutePositionalEmbedding, Transformer
 from audio_data_pytorch.utils import fractional_random_split
 from audio_diffusion_pytorch import AudioDiffusionModel, Sampler, Schedule
 from einops import rearrange
@@ -35,7 +35,7 @@ class Model(pl.LightningModule):
         tokenizer: str,
         text_embedding: nn.Module,
         text_encoder: nn.Module,
-        speech_encoder: nn.Module,
+        speech_posemb: nn.Module,
     ):
         super().__init__()
         self.lr = lr
@@ -50,7 +50,7 @@ class Model(pl.LightningModule):
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         self.text_embedding = text_embedding
         self.text_encoder = text_encoder
-        self.speech_encoder = speech_encoder
+        self.speech_posemb = speech_posemb
 
     @property
     def device(self):
@@ -77,6 +77,7 @@ class Model(pl.LightningModule):
         speech_embedding = rearrange(
             self.autoencoder.encode(waveforms), "b d n -> b n d"  # type: ignore
         )
+        speech_embedding = speech_embedding + self.speech_posemb(speech_embedding)
         # Get attention (alignment) matrix
         sim = einsum("b n d, b m d -> b n m", speech_embedding, text_embedding)
         attn = sim.softmax(dim=-1, dtype=torch.float32)
