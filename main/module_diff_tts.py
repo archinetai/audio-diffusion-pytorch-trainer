@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import librosa
 import plotly.graph_objs as go
@@ -13,7 +13,7 @@ from einops import rearrange
 from ema_pytorch import EMA
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
-from torch import Tensor, nn
+from torch import Tensor, einsum, nn
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
@@ -31,6 +31,11 @@ class Model(pl.LightningModule):
         ema_beta: float,
         ema_power: float,
         model: nn.Module,
+        autoencoder: nn.Module,
+        tokenizer: str,
+        text_embedding: nn.Module,
+        text_encoder: nn.Module,
+        speech_encoder: nn.Module,
     ):
         super().__init__()
         self.lr = lr
@@ -41,45 +46,46 @@ class Model(pl.LightningModule):
         self.model = model
         self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path="google/byt5-base"
-        )
-
-        features = 512
-        self.max_length = 512
-
-        self.to_embedding = nn.Embedding(260, features)
-
-        self.text_encoder = Transformer(
-            features=features,
-            max_length=self.max_length,
-            num_layers=8,
-            head_features=64,
-            num_heads=8,
-            multiplier=4,
-        )
+        self.autoencoder = autoencoder
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self.text_embedding = text_embedding
+        self.text_encoder = text_encoder
+        self.speech_encoder = speech_encoder
 
     @property
     def device(self):
         return next(self.model.parameters()).device
 
-    def get_text_channels(self, texts: List[str]) -> Tensor:
+    def get_text_channels(
+        self, texts: List[str], waveforms: Tensor, with_info: bool = False
+    ) -> Union[Tensor, Tuple[Tensor, Dict]]:
         # Compute batch of tokens and mask from texts
         encoded = self.tokenizer.batch_encode_plus(
             texts,
             return_tensors="pt",
             padding="max_length",
-            max_length=self.max_length,
+            max_length=self.text_encoder.max_length,
             truncation=True,
         )
         tokens = encoded["input_ids"].to(self.device)
         # mask = encoded["attention_mask"].to(self.device).bool()
         # Compute embedding
-        embedding = self.to_embedding(tokens)
+        text_embedding_in = self.text_embedding(tokens)
         # Encode with transformer
-        embedding_encoded = self.text_encoder(embedding)
-        channels = rearrange(embedding_encoded, "b t c -> b c t")
-        return channels
+        text_embedding = self.text_encoder(text_embedding_in)
+        # Encode audio
+        speech_embedding = rearrange(
+            self.autoencoder.encode(waveforms), "b d n -> b n d"  # type: ignore
+        )
+        # Get attention (alignment) matrix
+        sim = einsum("b n d, b m d -> b n m", speech_embedding, text_embedding)
+        attn = sim.softmax(dim=-1, dtype=torch.float32)
+        # Compute encoded speech/text aligned encoding
+        speech_encoding = einsum("b n m, b m d -> b n d", attn, text_embedding)
+        speech_encoded = self.speech_encoder(speech_encoding)
+        # Transpose to channels
+        channels = rearrange(speech_encoded, "b n d -> b d n")
+        return (channels, dict(alignment=attn)) if with_info else channels
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -93,8 +99,7 @@ class Model(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         waveforms, info = batch
-        text = info["text"]
-        channels = self.get_text_channels(text)
+        channels = self.get_text_channels(texts=info["text"], waveforms=waveforms)
         loss = self.model(waveforms, channels_list=[channels])
         self.log("train_loss", loss)
         # Update EMA model and log decay
@@ -104,8 +109,7 @@ class Model(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         waveforms, info = batch
-        text = info["text"]
-        channels = self.get_text_channels(text)
+        channels = self.get_text_channels(texts=info["text"], waveforms=waveforms)
         loss = self.model_ema(waveforms, channels_list=[channels])
         self.log("valid_loss", loss)
         return loss
@@ -227,6 +231,23 @@ def log_wandb_audio_spectrogram(
     )
 
 
+def log_wandb_embeddings(logger: WandbLogger, id: str, embeddings: Tensor):
+    num_items = embeddings.shape[0]
+    embeddings = embeddings.detach().cpu()
+
+    def get_figure(x):
+        trace = [go.Heatmap(z=x, colorscale="viridis")]
+        fig = go.Figure(data=trace)
+        return fig
+
+    logger.log(
+        {
+            f"embedding_{idx}_{id}": get_figure(embeddings[idx])
+            for idx in range(num_items)
+        }
+    )
+
+
 class SampleLogger(Callback):
     def __init__(
         self,
@@ -237,6 +258,7 @@ class SampleLogger(Callback):
         sampling_steps: List[int],
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
+        use_ema_model: bool,
     ) -> None:
         self.num_items = num_items
         self.channels = channels
@@ -245,6 +267,7 @@ class SampleLogger(Callback):
         self.sampling_steps = sampling_steps
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
+        self.use_ema_model = use_ema_model
 
         self.log_next = False
 
@@ -265,7 +288,11 @@ class SampleLogger(Callback):
             pl_module.eval()
 
         wandb_logger = get_wandb_logger(trainer).experiment
-        model = pl_module.model_ema.ema_model
+
+        if self.use_ema_model:
+            diffusion_model = pl_module.model_ema.ema_model
+        else:
+            diffusion_model = pl_module.model
 
         waveform, info = batch
         waveform = waveform[0 : self.num_items]
@@ -284,14 +311,20 @@ class SampleLogger(Callback):
         )
 
         texts = info["text"][0 : self.num_items]
-        channels = pl_module.get_text_channels(texts)
+        channels, info = pl_module.get_text_channels(
+            texts, waveforms=waveform, with_info=True
+        )
+
+        log_wandb_embeddings(
+            logger=wandb_logger, id="alignment", embeddings=info["alignment"]
+        )
 
         noise = torch.randn(
             (self.num_items, self.channels, self.length), device=pl_module.device
         )
 
         for steps in self.sampling_steps:
-            samples = model.sample(
+            samples = diffusion_model.sample(
                 noise=noise,
                 channels_list=[channels],
                 sampler=self.diffusion_sampler,
