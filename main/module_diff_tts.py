@@ -81,10 +81,10 @@ class Model(pl.LightningModule):
         )
         speech_embedding = speech_embedding + self.speech_posemb(speech_embedding)
         # Get attention (alignment) matrix
-        sim = einsum("b n d, b m d -> b n m", speech_embedding, text_embedding)
+        sim = einsum("b m d, b n d -> b m n", text_embedding, speech_embedding)
         attn = sim.softmax(dim=-1, dtype=torch.float32)
         # Compute encoded speech/text aligned encoding
-        speech_encoding = einsum("b n m, b m d -> b n d", attn, text_embedding)
+        speech_encoding = einsum("b m d, b m n  -> b n d", text_embedding, attn)
         speech_encoding = self.speech_encoder(speech_encoding)
         # Transpose to channels
         channels = rearrange(speech_encoding, "b n d -> b d n")
@@ -321,7 +321,7 @@ class SampleLogger(Callback):
         log_wandb_embeddings(
             logger=wandb_logger,
             id="alignment",
-            embeddings=rearrange(info["alignment"], "b n m -> b m n"),
+            embeddings="b n m -> b m n",
         )
 
         noise = torch.randn(
