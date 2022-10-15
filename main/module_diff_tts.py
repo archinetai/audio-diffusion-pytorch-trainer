@@ -319,9 +319,7 @@ class SampleLogger(Callback):
         )
 
         log_wandb_embeddings(
-            logger=wandb_logger,
-            id="alignment",
-            embeddings="b n m -> b m n",
+            logger=wandb_logger, id="alignment", embeddings=info["alignment"]
         )
 
         noise = torch.randn(
