@@ -42,6 +42,7 @@ class Model(pl.LightningModule):
         self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
 
         self.autoencoder = torch.load(autoencoder_path, map_location=self.device)
+        self.autoencoder.requires_grad_(False)
         self.autoencoder_latent_scale = autoencoder_latent_scale
 
     def configure_optimizers(self):

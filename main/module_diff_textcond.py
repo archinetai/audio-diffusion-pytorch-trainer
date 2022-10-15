@@ -55,7 +55,7 @@ class Model(pl.LightningModule):
 
     @property
     def device(self):
-        return next(self.model.parameters()).device
+        return next(self.parameters()).device
 
     def get_text_embeddings(self, texts: List[str]) -> Tensor:
         # Compute batch of tokens and mask from texts
