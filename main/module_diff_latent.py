@@ -42,7 +42,6 @@ class Model(pl.LightningModule):
         self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
 
         self.autoencoder = torch.load(autoencoder_path, map_location=self.device)
-        self.autoencoder.requires_grad_(False)
         self.autoencoder_latent_scale = autoencoder_latent_scale
 
     def configure_optimizers(self):
@@ -55,12 +54,14 @@ class Model(pl.LightningModule):
         )
         return optimizer
 
+    @torch.no_grad()
     def encode_latent(self, x: Tensor) -> Tensor:
         z, info = self.autoencoder.encode(x, with_info=True)
         if "mean" in info:
             z = info["mean"]
         return z * self.autoencoder_latent_scale
 
+    @torch.no_grad()
     def decode_latent(self, z: Tensor) -> Tensor:
         return self.autoencoder.decode(z / self.autoencoder_latent_scale)
 
