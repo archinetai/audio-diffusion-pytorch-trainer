@@ -54,7 +54,7 @@ datamodule:
       random_crop_size: ${length}
       stereo: True
   val_split: 0.0001
-  batch_size: 64
+  batch_size: 32
   num_workers: 8
   pin_memory: True
 
