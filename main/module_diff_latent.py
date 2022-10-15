@@ -56,7 +56,10 @@ class Model(pl.LightningModule):
         return optimizer
 
     def encode_latent(self, x: Tensor) -> Tensor:
-        return self.autoencoder.encode(x) * self.autoencoder_latent_scale
+        z, info = self.autoencoder.encode(x, with_info=True)
+        if "mean" in info:
+            z = info["mean"]
+        return z * self.autoencoder_latent_scale
 
     def decode_latent(self, z: Tensor) -> Tensor:
         return self.autoencoder.decode(z / self.autoencoder_latent_scale)
