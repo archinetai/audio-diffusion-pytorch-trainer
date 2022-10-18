@@ -64,6 +64,7 @@ datamodule:
       source_rate: 48000
       target_rate: ${sampling_rate}
       crop_size: ${length}
+      stereo: True
   val_split: 0.01
   batch_size: 4
   num_workers: 8
