@@ -20,7 +20,7 @@ model:
   model:
     _target_: audio_diffusion_pytorch.AudioDiffusionModel
     in_channels: ${channels}
-    channels: 160
+    channels: 128
     patch_factor: 16
     patch_blocks: 1
     resnet_groups: 8
@@ -104,4 +104,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
-  accumulate_grad_batches: 2
+  accumulate_grad_batches: 1
