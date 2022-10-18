@@ -80,35 +80,43 @@ class Model(pl.LightningModule):
 class Datamodule(pl.LightningDataModule):
     def __init__(
         self,
-        dataset_train,
-        dataset_valid,
+        dataset,
         *,
+        val_split: float,
+        batch_size: int,
         num_workers: int,
         pin_memory: bool = False,
         **kwargs: int,
     ) -> None:
         super().__init__()
-        self.dataset_train = dataset_train
-        self.dataset_valid = dataset_valid
+        self.dataset = dataset
+        self.val_split = val_split
+        self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.data_train: Any = None
         self.data_val: Any = None
 
+    def setup(self, stage: Any = None) -> None:
+        split = [1.0 - self.val_split, self.val_split]
+        self.data_train, self.data_val = fractional_random_split(self.dataset, split)
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
-            dataset=self.dataset_train,
-            batch_size=None,
+            dataset=self.data_train,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            shuffle=True,
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
-            dataset=self.dataset_valid,
-            batch_size=None,
+            dataset=self.data_val,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            shuffle=True,
         )
 
 
