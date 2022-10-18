@@ -35,7 +35,7 @@ model:
     use_magnitude_channels: True
     diffusion_type: v
     diffusion_sigma_distribution:
-      _target_: audio_diffusion_pytorch.VDistribution
+      _target_: audio_diffusion_pytorch.UniformDistribution
 
   autoencoder_path: null
   autoencoder_latent_scale: 0.2
