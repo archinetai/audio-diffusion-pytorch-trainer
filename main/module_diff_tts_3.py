@@ -10,7 +10,7 @@ import wandb
 from a_transformers_pytorch.transformers import Transformer
 from audio_data_pytorch.utils import fractional_random_split
 from audio_diffusion_pytorch import AudioDiffusionModel, Sampler, Schedule
-from einops import rearrange
+from einops import rearrange, repeat
 from ema_pytorch import EMA
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
@@ -19,6 +19,19 @@ from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
 """ Model """
+
+
+class ChannelPositionalEmbedding(nn.Module):
+    def __init__(self, channels: int, length: int):
+        super().__init__()
+        self.length = length
+        self.embedding = nn.Embedding(length, channels)
+
+    def forward(self, x: Tensor) -> Tensor:
+        batch_size, device = x.shape[0], x.device
+        position = torch.arange(self.length, device=device)
+        channels = repeat(self.embedding(position), "n d -> b d n", b=batch_size)
+        return channels
 
 
 class Model(pl.LightningModule):
@@ -33,6 +46,8 @@ class Model(pl.LightningModule):
         ema_power: float,
         model: nn.Module,
         embedder: nn.Module,
+        positional_embedding_channels: int,
+        positional_embedding_length: int,
     ):
         super().__init__()
         self.lr = lr
@@ -45,6 +60,11 @@ class Model(pl.LightningModule):
         self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
         # Text Encoder
         self.embedder = embedder
+
+        self.positional_embedding = ChannelPositionalEmbedding(
+            positional_embedding_channels,
+            positional_embedding_length,
+        )
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -59,7 +79,8 @@ class Model(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         waveforms, info = batch
         embedding = self.embedder(info["text"])
-        loss = self.model(waveforms, embedding=embedding)
+        posemb = self.positional_embedding(waveforms)
+        loss = self.model(waveforms, embedding=embedding, channels_list=[posemb])
         self.log("train_loss", loss)
         # Update EMA model and log decay
         self.model_ema.update()
@@ -69,7 +90,8 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         waveforms, info = batch
         embedding = self.embedder(info["text"])
-        loss = self.model_ema(waveforms, embedding=embedding)
+        posemb = self.positional_embedding(waveforms)
+        loss = self.model_ema(waveforms, embedding=embedding, channels_list=[posemb])
         self.log("valid_loss", loss)
         return loss
 
@@ -256,6 +278,8 @@ class SampleLogger(Callback):
 
         embedding = pl_module.embedder(texts)
 
+        posemb = pl_module.positional_embedding(waveform)
+
         noise = torch.randn(
             (self.num_items, self.channels, self.length), device=pl_module.device
         )
@@ -265,6 +289,7 @@ class SampleLogger(Callback):
                 noise=noise,
                 embedding=embedding,
                 embedding_scale=self.embedding_scale,
+                channels_list=[posemb],
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,
