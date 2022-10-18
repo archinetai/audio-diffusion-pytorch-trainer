@@ -30,7 +30,7 @@ model:
     num_blocks: [2, 2, 2, 2, 2, 2]
     attentions: [0, 0, 0, 0, 1, 1, 1]
     attention_heads: 16
-    attention_features: 128
+    attention_features: 64
     attention_multiplier: 4
     use_nearest_upsample: False
     use_skip_scale: True
