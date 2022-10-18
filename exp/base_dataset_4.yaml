@@ -3,7 +3,7 @@
 # 736M params
 
 sampling_rate: 48000
-length: 524288
+length: 262144
 channels: 2
 log_every_n_steps: 1000
 
