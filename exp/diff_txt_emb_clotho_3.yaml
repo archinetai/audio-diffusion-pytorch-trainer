@@ -15,7 +15,7 @@ model:
   lr_beta2: 0.999
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
-  ema_beta: 0.9999
+  ema_beta: 0.995
   ema_power: 0.7
 
   model:
@@ -114,7 +114,7 @@ callbacks:
     length: ${length}
     sampling_steps: [3,5,10,25,50,100]
     embedding_scale: 15.0
-    use_ema_model: False
+    use_ema_model: True
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
