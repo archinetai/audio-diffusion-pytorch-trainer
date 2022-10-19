@@ -36,7 +36,7 @@ model:
     use_nearest_upsample: False
     use_skip_scale: True
     diffusion_sigma_distribution:
-      _target_: audio_diffusion_pytorch.VDistribution
+      _target_: audio_diffusion_pytorch.UniformDistribution
     embedding_max_length: ${encoder_max_length}
     embedding_features: ${encoder_features}
     embedding_mask_proba: 0.1
@@ -126,13 +126,9 @@ callbacks:
     embedding_scale: 7.0
     use_ema_model: False
     diffusion_sampler:
-      _target_: audio_diffusion_pytorch.ADPM2Sampler
-      rho: 1.0
+      _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
-      _target_: audio_diffusion_pytorch.KarrasSchedule
-      sigma_min: 0.0001
-      sigma_max: 5.0
-      rho: 9.0
+      _target_: audio_diffusion_pytorch.LinearSchedule
 
 loggers:
   wandb:

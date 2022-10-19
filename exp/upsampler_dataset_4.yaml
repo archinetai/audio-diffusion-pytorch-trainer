@@ -1,73 +1,69 @@
 # @package _global_
 
-sampling_rate: 16000
-length: 131072
+sampling_rate: 48000
+length: 262144
 channels: 2
+upsampler_factors: [2, 4, 8, 16, 32, 64, 128] # [24000Hz,...,375Hz]
 log_every_n_steps: 1000
 
-encoder_max_length: 64
-encoder_features: 768
-
 model:
-  _target_: main.module_diff_tts_3.Model
+  _target_: main.module_upsampler.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
-  ema_beta: 0.995
+  ema_beta: 0.9999
   ema_power: 0.7
 
-  model:
-    _target_: audio_diffusion_pytorch.AudioDiffusionConditional
+  upsampler:
+    _target_: audio_diffusion_pytorch.AudioDiffusionUpsampler
+    factor: ${upsampler_factors}
+    factor_features: 128
     in_channels: ${channels}
-    channels: 128
-    patch_factor: 16
+    channels: 256
+    patch_factor: 32
     patch_blocks: 1
     resnet_groups: 8
     kernel_multiplier_downsample: 2
     multipliers: [1, 2, 4, 4, 4, 4, 4]
     factors: [2, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 2, 2]
-    attentions: [0, 0, 0, 1, 1, 1, 1]
+    attentions: [0, 0, 0, 0, 1, 1, 1]
     attention_heads: 8
-    attention_features: 64
+    attention_features: 128
     attention_multiplier: 4
     use_nearest_upsample: False
     use_skip_scale: True
-    diffusion_type: v
     diffusion_sigma_distribution:
       _target_: audio_diffusion_pytorch.UniformDistribution
 
-    embedding_max_length: ${encoder_max_length}
-    embedding_features: ${encoder_features}
-    embedding_mask_proba: 0.1
-
-  embedder:
-    _target_: audio_diffusion_pytorch.T5Embedder
-    model: t5-base
-    max_length: ${encoder_max_length}
-
-
 datamodule:
-  _target_: main.module_diff_tts_3.Datamodule
+  _target_: main.module_upsampler.Datamodule
   dataset:
-    _target_: audio_data_pytorch.LibriSpeechDataset
-    root: ${data_dir}
-    with_info: True
+    _target_: audio_data_pytorch.WAVDataset
+    recursive: True
+    sample_rate: ${sampling_rate}
     transforms:
       _target_: audio_data_pytorch.AllTransform
-      source_rate: 16000
-      target_rate: ${sampling_rate}
       random_crop_size: ${length}
-  val_split: 0.01
-  batch_size: 16
+      stereo: True
+      source_rate: ${sampling_rate}
+      target_rate: ${sampling_rate}
+      loudness: -20
+
+  val_split: 0.0005
+  batch_size: 24
   num_workers: 8
   pin_memory: True
 
 callbacks:
   rich_progress_bar:
     _target_: pytorch_lightning.callbacks.RichProgressBar
+
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
 
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint
@@ -79,19 +75,17 @@ callbacks:
     dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
 
-  model_summary:
-    _target_: pytorch_lightning.callbacks.RichModelSummary
-    max_depth: 2
+  learning_rate_monitor:
+    _target_: pytorch_lightning.callbacks.LearningRateMonitor
 
   audio_samples_logger:
-    _target_: main.module_diff_tts_3.SampleLogger
+    _target_: main.module_upsampler.SampleLogger
     num_items: 3
+    factor: ${upsampler_factors}
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    sampling_steps: [3,5,10,25,50,100]
-    use_ema_model: False
-    embedding_scale: 5.0
+    sampling_steps: [3,5,10,25,50]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
@@ -118,4 +112,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 2

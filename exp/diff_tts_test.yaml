@@ -37,7 +37,7 @@ model:
     context_channels: [0, 0, 0, 0, 512]
     diffusion_type: v
     diffusion_sigma_distribution:
-      _target_: audio_diffusion_pytorch.VDistribution
+      _target_: audio_diffusion_pytorch.UniformDistribution
 
   autoencoder:
     _target_: audio_diffusion_pytorch.AutoEncoder1d
@@ -119,13 +119,9 @@ callbacks:
     sampling_steps: [3,5,10,25,50,100]
     use_ema_model: False
     diffusion_sampler:
-      _target_: audio_diffusion_pytorch.ADPM2Sampler
-      rho: 1.0
+      _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
-      _target_: audio_diffusion_pytorch.KarrasSchedule
-      sigma_min: 0.0001
-      sigma_max: 5.0
-      rho: 9.0
+      _target_: audio_diffusion_pytorch.LinearSchedule
 
 loggers:
   wandb:
