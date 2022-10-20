@@ -12,6 +12,7 @@ import torchaudio
 import wandb
 from audio_data_pytorch.utils import fractional_random_split
 from einops import rearrange, reduce
+from ema_pytorch import EMA
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
 from torch import LongTensor, Tensor, nn
@@ -30,6 +31,8 @@ class Model(pl.LightningModule):
         lr_beta1: float,
         lr_beta2: float,
         lr_weight_decay: float,
+        ema_beta: float,
+        ema_power: float,
         sample_rate: int,
         autoencoder: nn.Module,
         loss_autoencoder_path: Optional[nn.Module] = None,
@@ -49,6 +52,7 @@ class Model(pl.LightningModule):
         self.loss_bottleneck_weight = loss_bottleneck_weight
 
         self.autoencoder = autoencoder
+        self.autoencoder_ema = EMA(self.autoencoder, beta=ema_beta, power=ema_power)
 
         if exists(loss_autoencoder_path):
             self.loss_type = "ae"
@@ -110,11 +114,15 @@ class Model(pl.LightningModule):
             loss = self.loss_fn(x, y)
 
         self.log("train_loss", loss)
+
+        # Update EMA model and log decay
+        self.autoencoder_ema.update()
+        self.log("ema_decay", self.autoencoder_ema.get_current_decay())
         return loss
 
     def validation_step(self, batch, batch_idx):
         x = batch
-        y = self.autoencoder(x)
+        y = self.autoencoder_ema(x)
         loss = self.loss_fn(x, y)
         self.log("valid_loss", loss)
         return loss
@@ -265,7 +273,12 @@ def log_wandb_embeddings(logger: WandbLogger, id: str, embeddings: Tensor):
 
 class SampleLogger(Callback):
     def __init__(
-        self, num_items: int, channels: int, sampling_rate: int, length: int
+        self,
+        num_items: int,
+        channels: int,
+        sampling_rate: int,
+        length: int,
+        use_ema_model: bool,
     ) -> None:
         self.num_items = num_items
         self.channels = channels
@@ -273,6 +286,7 @@ class SampleLogger(Callback):
         self.length = length
         self.epoch_count = 0
         self.log_next = False
+        self.use_ema_model = use_ema_model
 
     def on_validation_epoch_start(self, trainer, pl_module):
         self.log_next = True
@@ -291,7 +305,10 @@ class SampleLogger(Callback):
             pl_module.eval()
 
         wandb_logger = get_wandb_logger(trainer).experiment
+
         autoencoder = pl_module.autoencoder
+        if self.use_ema_model:
+            autoencoder = pl_module.autoencoder_ema.ema_model
 
         x = batch[0 : self.num_items]
 
