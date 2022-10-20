@@ -12,12 +12,12 @@ model:
   lr_beta2: 0.999
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
-  ema_beta: 0.9999
+  ema_beta: 0.995
   ema_power: 0.7
 
   model:
     _target_: audio_diffusion_pytorch.AudioDiffusionModel
-    in_channels: 32
+    in_channels: 64
     channels: 128
     patch_factor: 1
     patch_blocks: 1
@@ -80,7 +80,7 @@ callbacks:
     sampling_rate: ${sampling_rate}
     length: ${length}
     sampling_steps: [3,5,10,25,50,100]
-    use_ema_model: False
+    use_ema_model: True
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
