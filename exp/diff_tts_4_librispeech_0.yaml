@@ -17,8 +17,6 @@ model:
   lr_weight_decay: 1e-3
   ema_beta: 0.995
   ema_power: 0.7
-  positional_embedding_length: 1024
-  positional_embedding_channels: 128
 
   model:
     _target_: audio_diffusion_pytorch.AudioDiffusionConditional
@@ -31,7 +29,6 @@ model:
     multipliers: [1, 2, 4, 4, 4, 4, 4]
     factors: [2, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 2, 2]
-    context_channels: [0, 0, 0, 128]
     attentions: [0, 0, 0, 1, 1, 1, 1]
     attention_heads: 8
     attention_features: 64
@@ -97,8 +94,8 @@ callbacks:
     sampling_rate: ${sampling_rate}
     length: ${length}
     sampling_steps: [3,5,10,25,50,100]
-    use_ema_model: False
-    embedding_scale: 5.0
+    use_ema_model: True
+    embedding_scale: 8.0
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
