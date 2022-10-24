@@ -111,4 +111,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
-  accumulate_grad_batches: 2
+  accumulate_grad_batches: 1
