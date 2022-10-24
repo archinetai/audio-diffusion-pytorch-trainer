@@ -126,7 +126,7 @@ class Model(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
-            list(self.autoencoder.parameters()),
+            list(self.parameters()),
             lr=self.lr,
             betas=(self.lr_beta1, self.lr_beta2),
             eps=self.lr_eps,
