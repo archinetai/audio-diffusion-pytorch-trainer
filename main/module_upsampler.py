@@ -206,6 +206,7 @@ class SampleLogger(Callback):
         sampling_rate: int,
         length: int,
         sampling_steps: List[int],
+        use_ema_model: bool,
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
     ) -> None:
@@ -215,6 +216,7 @@ class SampleLogger(Callback):
         self.sampling_rate = sampling_rate
         self.length = length
         self.sampling_steps = sampling_steps
+        self.use_ema_model = use_ema_model
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
 
@@ -237,7 +239,10 @@ class SampleLogger(Callback):
             pl_module.eval()
 
         wandb_logger = get_wandb_logger(trainer).experiment
-        model = pl_module.model_ema.ema_model
+
+        diffusion_model = pl_module.model
+        if self.use_ema_model:
+            diffusion_model = pl_module.model_ema.ema_model
 
         # Log true waveforms
         waveforms = batch[0 : self.num_items]
@@ -270,7 +275,7 @@ class SampleLogger(Callback):
 
         # Log upsampled waveforms at different steps
         for steps in self.sampling_steps:
-            samples = model.sample(
+            samples = diffusion_model.sample(
                 waveforms_downsampled,
                 factor=factor,
                 sampler=self.diffusion_sampler,

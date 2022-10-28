@@ -84,6 +84,7 @@ callbacks:
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
+    use_ema_model: False
     sampling_steps: [3,5,10,25,50]
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.VSampler
