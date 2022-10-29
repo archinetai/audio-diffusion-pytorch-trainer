@@ -1,12 +1,15 @@
 # @package _global_
 
 sampling_rate: 16000
-length: 65536
-log_every_n_steps: 1000
+length: 131072
 channels: 2
+log_every_n_steps: 1000
+
+encoder_max_length: 64
+encoder_features: 768
 
 model:
-  _target_: main.module_ae.Model
+  _target_: main.module_diff_tts_4.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
@@ -15,51 +18,56 @@ model:
   ema_beta: 0.995
   ema_power: 0.7
 
-  sample_rate: ${sampling_rate}
-  loss_type: sdstft
-  loss_bottleneck_weight: 1e-4
-
-  autoencoder:
-    _target_: audio_diffusion_pytorch.AutoEncoder1d
+  model:
+    _target_: audio_diffusion_pytorch.AudioDiffusionConditional
     in_channels: ${channels}
-    channels: 16
-    patch_factor: 1
+    channels: 128
+    patch_factor: 16
     patch_blocks: 1
     resnet_groups: 8
-    multipliers: [1, 8, 8, 8, 8, 8, 8]
+    kernel_multiplier_downsample: 2
+    multipliers: [1, 2, 4, 4, 4, 4, 4]
     factors: [2, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 2, 2]
-    bottleneck:
-      - _target_: audio_diffusion_pytorch.Tanh
-      - _target_: audio_diffusion_pytorch.Noiser
-        sigma: 0.2
+    attentions: [0, 0, 0, 1, 1, 1, 1]
+    attention_heads: 8
+    attention_features: 64
+    attention_multiplier: 4
+    attention_use_rel_pos: True
+    attention_rel_pos_max_distance: 512
+    attention_rel_pos_num_buckets: 512
+    use_nearest_upsample: False
+    use_skip_scale: True
+    diffusion_type: v
+    diffusion_sigma_distribution:
+      _target_: audio_diffusion_pytorch.UniformDistribution
 
-    # bottleneck:
-    #   _target_: quantizer_pytorch.quantizer.MQ1d
-    #   channels: 32
-    #   codebook_size: 1024
-    #   num_overlaps: 4
-    #   temperature: 1.0
+    embedding_max_length: ${encoder_max_length}
+    embedding_features: ${encoder_features}
+    embedding_mask_proba: 0.1
+
+  embedder:
+    _target_: audio_diffusion_pytorch.T5Embedder
+    model: t5-base
+    max_length: ${encoder_max_length}
 
 
 datamodule:
-  _target_: main.module_ae.Datamodule
+  _target_: main.module_diff_tts_4.Datamodule
   dataset:
-    _target_: audio_data_pytorch.YoutubeDataset
-    urls:
-      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
+    _target_: audio_data_pytorch.LibriSpeechDataset
     root: ${data_dir}
-    crop_length: 12 # seconds crops
+    with_info: True
     transforms:
       _target_: audio_data_pytorch.AllTransform
-      source_rate: ${sampling_rate}
+      source_rate: 16000
       target_rate: ${sampling_rate}
       random_crop_size: ${length}
+      stereo: True
   val_split: 0.01
-  batch_size: 4
+  batch_size: 16
   num_workers: 8
   pin_memory: True
-
 
 callbacks:
   rich_progress_bar:
@@ -80,12 +88,18 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_ae.SampleLogger
-    num_items: 2
+    _target_: main.module_diff_tts_4.SampleLogger
+    num_items: 3
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
+    sampling_steps: [3,5,10,25,50,100]
     use_ema_model: True
+    embedding_scale: 8.0
+    diffusion_sampler:
+      _target_: audio_diffusion_pytorch.VSampler
+    diffusion_schedule:
+      _target_: audio_diffusion_pytorch.LinearSchedule
 
 loggers:
   wandb:
@@ -108,3 +122,4 @@ trainer:
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
+  accumulate_grad_batches: 1

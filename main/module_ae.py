@@ -96,22 +96,19 @@ class Model(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch
 
-        if exists(self.autoencoder.bottleneck):
-            y, info = self.autoencoder(x, with_info=True)
-            loss = self.loss_fn(x, y)
-            if "loss" in info:
-                loss_bottleneck = info["loss"]
-                loss += self.loss_bottleneck_weight * loss_bottleneck
-                self.log("loss_bottleneck", loss_bottleneck)
-            if "perplexity" in info:
-                for i, perplexity in enumerate(info["perplexity"]):
-                    self.log(f"train_perplexity_{i}", perplexity)
-            if "replaced_codes" in info:
-                for i, replaced_codes in enumerate(info["replaced_codes"]):
-                    self.log(f"train_replaced_codes_{i}", replaced_codes)
-        else:
-            y = self.autoencoder(x)
-            loss = self.loss_fn(x, y)
+        y, info = self.autoencoder(x, with_info=True)
+        loss = self.loss_fn(x, y)
+
+        if "loss" in info:
+            loss_bottleneck = info["loss"]
+            loss += self.loss_bottleneck_weight * loss_bottleneck
+            self.log("loss_bottleneck", loss_bottleneck)
+        if "perplexity" in info:
+            for i, perplexity in enumerate(info["perplexity"]):
+                self.log(f"train_perplexity_{i}", perplexity)
+        if "replaced_codes" in info:
+            for i, replaced_codes in enumerate(info["replaced_codes"]):
+                self.log(f"train_replaced_codes_{i}", replaced_codes)
 
         self.log("train_loss", loss)
 
@@ -129,7 +126,7 @@ class Model(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
-            list(self.autoencoder.parameters()),
+            list(self.parameters()),
             lr=self.lr,
             betas=(self.lr_beta1, self.lr_beta2),
             eps=self.lr_eps,

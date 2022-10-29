@@ -1,7 +1,5 @@
 import random
-import warnings
-from copy import deepcopy
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, List, Optional
 
 import librosa
 import plotly.graph_objs as go
@@ -9,16 +7,16 @@ import pytorch_lightning as pl
 import torch
 import torchaudio
 import wandb
+from a_transformers_pytorch.transformers import Transformer
 from audio_data_pytorch.utils import fractional_random_split
-from audio_diffusion_pytorch import AudioDiffusionUpsampler, Sampler, Schedule
-from audio_diffusion_pytorch.utils import downsample, upsample
-from einops import rearrange
+from audio_diffusion_pytorch import AudioDiffusionModel, Sampler, Schedule
+from einops import rearrange, repeat
 from ema_pytorch import EMA
 from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
-from pytorch_lightning.utilities import rank_zero_only
-from torch import Tensor, nn, optim
+from torch import Tensor, nn
 from torch.utils.data import DataLoader
+from transformers import AutoTokenizer
 
 """ Model """
 
@@ -27,26 +25,26 @@ class Model(pl.LightningModule):
     def __init__(
         self,
         lr: float,
-        lr_eps: float,
         lr_beta1: float,
         lr_beta2: float,
+        lr_eps: float,
         lr_weight_decay: float,
         ema_beta: float,
         ema_power: float,
-        upsampler: nn.Module,
+        model: nn.Module,
+        embedder: nn.Module,
     ):
         super().__init__()
         self.lr = lr
-        self.lr_eps = lr_eps
         self.lr_beta1 = lr_beta1
         self.lr_beta2 = lr_beta2
+        self.lr_eps = lr_eps
         self.lr_weight_decay = lr_weight_decay
-        self.model = upsampler
+        # Diffusion Model
+        self.model = model
         self.model_ema = EMA(self.model, beta=ema_beta, power=ema_power)
-
-    @property
-    def device(self):
-        return next(self.model.parameters()).device
+        # Text Encoder
+        self.embedder = embedder
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -59,16 +57,19 @@ class Model(pl.LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
-        waveforms = batch
-        loss = self.model(waveforms)
+        waveforms, info = batch
+        embedding = self.embedder(info["text"])
+        loss = self.model(waveforms, embedding=embedding)
         self.log("train_loss", loss)
+        # Update EMA model and log decay
         self.model_ema.update()
         self.log("ema_decay", self.model_ema.get_current_decay())
         return loss
 
     def validation_step(self, batch, batch_idx):
-        waveforms = batch
-        loss = self.model_ema(waveforms)
+        waveforms, info = batch
+        embedding = self.embedder(info["text"])
+        loss = self.model_ema(waveforms, embedding=embedding)
         self.log("valid_loss", loss)
         return loss
 
@@ -189,36 +190,28 @@ def log_wandb_audio_spectrogram(
     )
 
 
-def to_list(val):
-    if isinstance(val, tuple):
-        return list(val)
-    if isinstance(val, list):
-        return val
-    return [val]
-
-
 class SampleLogger(Callback):
     def __init__(
         self,
         num_items: int,
-        factor: Union[int, Sequence[int]],
         channels: int,
         sampling_rate: int,
         length: int,
         sampling_steps: List[int],
-        use_ema_model: bool,
+        embedding_scale: int,
         diffusion_schedule: Schedule,
         diffusion_sampler: Sampler,
+        use_ema_model: bool,
     ) -> None:
         self.num_items = num_items
-        self.factors = to_list(factor)
         self.channels = channels
         self.sampling_rate = sampling_rate
         self.length = length
         self.sampling_steps = sampling_steps
-        self.use_ema_model = use_ema_model
+        self.embedding_scale = embedding_scale
         self.diffusion_schedule = diffusion_schedule
         self.diffusion_sampler = diffusion_sampler
+        self.use_ema_model = use_ema_model
 
         self.log_next = False
 
@@ -239,62 +232,56 @@ class SampleLogger(Callback):
             pl_module.eval()
 
         wandb_logger = get_wandb_logger(trainer).experiment
-
         diffusion_model = pl_module.model
+
         if self.use_ema_model:
             diffusion_model = pl_module.model_ema.ema_model
 
-        # Log true waveforms
-        waveforms = batch[0 : self.num_items]
+        waveform, info = batch
+        waveform = waveform[0 : self.num_items]
+        texts = info["text"][0 : self.num_items]
+
         log_wandb_audio_batch(
             logger=wandb_logger,
             id="true",
-            samples=waveforms,
+            samples=waveform,
             sampling_rate=self.sampling_rate,
         )
         log_wandb_audio_spectrogram(
             logger=wandb_logger,
             id="true",
-            samples=waveforms,
+            samples=waveform,
             sampling_rate=self.sampling_rate,
         )
 
-        # Compute and log downsampled waveforms
-        factor = random.choice(self.factors)
-        downsampled_rate = self.sampling_rate // factor
-        waveforms_downsampled = downsample(waveforms, factor=factor)
-        # We log an upsampled version since the player doesn't support low Hz rates
-        waveforms_reupsampled = upsample(waveforms_downsampled, factor=factor)
-        log_wandb_audio_batch(
-            logger=wandb_logger,
-            id="downsampled",
-            samples=waveforms_reupsampled,
-            sampling_rate=self.sampling_rate,
-            caption=f"Sample rate {downsampled_rate}",
+        embedding = pl_module.embedder(texts)
+
+        noise = torch.randn(
+            (self.num_items, self.channels, self.length), device=pl_module.device
         )
 
-        # Log upsampled waveforms at different steps
         for steps in self.sampling_steps:
             samples = diffusion_model.sample(
-                waveforms_downsampled,
-                factor=factor,
+                noise=noise,
+                embedding=embedding,
+                embedding_scale=self.embedding_scale,
                 sampler=self.diffusion_sampler,
                 sigma_schedule=self.diffusion_schedule,
                 num_steps=steps,
             )
             log_wandb_audio_batch(
                 logger=wandb_logger,
-                id="upsampled",
+                id="sample",
                 samples=samples,
                 sampling_rate=self.sampling_rate,
-                caption=f"Sampled in {steps} steps from {downsampled_rate} Hz",
+                caption=f"Sampled in {steps} steps",
             )
             log_wandb_audio_spectrogram(
                 logger=wandb_logger,
-                id="upsampled",
+                id="sample",
                 samples=samples,
                 sampling_rate=self.sampling_rate,
-                caption=f"Sampled in {steps} steps from {downsampled_rate} Hz",
+                caption=f"Sampled in {steps} steps",
             )
 
         if is_train:

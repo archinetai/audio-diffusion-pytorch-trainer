@@ -1,7 +1,7 @@
 # @package _global_
 
-sampling_rate: 16000
-length: 65536
+sampling_rate: 48000
+length: 131072
 log_every_n_steps: 1000
 channels: 2
 
@@ -12,9 +12,6 @@ model:
   lr_beta2: 0.999
   lr_eps: 1e-6
   lr_weight_decay: 1e-3
-  ema_beta: 0.995
-  ema_power: 0.7
-
   sample_rate: ${sampling_rate}
   loss_type: sdstft
   loss_bottleneck_weight: 1e-4
@@ -34,29 +31,22 @@ model:
       - _target_: audio_diffusion_pytorch.Noiser
         sigma: 0.2
 
-    # bottleneck:
-    #   _target_: quantizer_pytorch.quantizer.MQ1d
-    #   channels: 32
-    #   codebook_size: 1024
-    #   num_overlaps: 4
-    #   temperature: 1.0
-
 
 datamodule:
   _target_: main.module_ae.Datamodule
   dataset:
-    _target_: audio_data_pytorch.YoutubeDataset
-    urls:
-      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
-    root: ${data_dir}
-    crop_length: 12 # seconds crops
+    _target_: audio_data_pytorch.WAVDataset
+    recursive: True
+    sample_rate: ${sampling_rate}
     transforms:
       _target_: audio_data_pytorch.AllTransform
+      random_crop_size: ${length}
+      stereo: True
       source_rate: ${sampling_rate}
       target_rate: ${sampling_rate}
-      random_crop_size: ${length}
-  val_split: 0.01
-  batch_size: 4
+
+  val_split: 0.0001
+  batch_size: 16
   num_workers: 8
   pin_memory: True
 
@@ -85,7 +75,6 @@ callbacks:
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    use_ema_model: True
 
 loggers:
   wandb:
