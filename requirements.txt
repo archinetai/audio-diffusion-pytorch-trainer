@@ -19,6 +19,7 @@ ema-pytorch
 py7zr
 
 audio-diffusion-pytorch
+audio-encoders-pytorch
 audio-data-pytorch
 quantizer-pytorch
 difformer-pytorch
