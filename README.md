@@ -1,5 +1,7 @@
 # Trainer for [`audio-diffusion-pytorch`](https://github.com/archinetai/audio-diffusion-pytorch)
 
+audio-diffusion-pytorch-trainer notebook: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/archinetai/audio-diffusion-pytorch-trainer/blob/main/notebooks/audio_diffusion_pytorch_trainer_v0_2.ipynb)
+
 ## Setup
 
 (Optional) Create virtual environment and activate it
