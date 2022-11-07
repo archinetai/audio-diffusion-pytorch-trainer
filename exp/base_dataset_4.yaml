@@ -18,18 +18,18 @@ model:
   model:
     _target_: audio_diffusion_pytorch.AudioDiffusionModel
     in_channels: ${channels}
-    channels: 16
-    patch_factor: 8
-    multipliers: [1, 4, 8, 8, 8, 16, 16, 16]
-    factors: [2, 2, 2, 2, 2, 2, 2]
-    num_blocks: [2, 2, 2, 2, 4, 4, 8]
-    attentions: [0, 0, 0, 0, 0, 1, 2, 2]
-    attention_heads: 8
-    attention_features: 64
-    attention_multiplier: 4
+    channels: 128
+    patch_factor: 16
     patch_blocks: 1
     resnet_groups: 8
     kernel_multiplier_downsample: 2
+    multipliers: [1, 2, 4, 4, 4, 4, 4]
+    factors: [2, 2, 2, 2, 2, 2]
+    num_blocks: [2, 2, 2, 2, 2, 2]
+    attentions: [0, 0, 0, 0, 1, 1, 1]
+    attention_heads: 16
+    attention_features: 64
+    attention_multiplier: 4
     use_nearest_upsample: False
     use_skip_scale: True
     diffusion_type: v
