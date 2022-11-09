@@ -1,0 +1,113 @@
+# @package _global_
+
+# To execute this experiment on a single GPU run:
+# python train.py exp=base_medium trainer.gpus=1 +datamodule.dataset.path=/your_wav_path_here
+
+sampling_rate: 48000
+length: 262144
+channels: 2
+log_every_n_steps: 1000
+
+model:
+  _target_: main.module_base.Model
+  lr: 1e-4
+  lr_beta1: 0.95
+  lr_beta2: 0.999
+  lr_eps: 1e-6
+  lr_weight_decay: 1e-3
+  ema_beta: 0.995
+  ema_power: 0.7
+
+  model:
+    _target_: audio_diffusion_pytorch.AudioDiffusionModel
+    in_channels: ${channels}
+    channels: 256
+    multipliers: [4, 2, 2, 3, 3, 3, 3, 3]
+    factors: [2, 2, 2, 2, 2, 2, 2]
+    num_blocks: [2, 2, 2, 2, 4, 4, 4]
+    attentions: [0, 0, 0, 2, 2, 2, 2]
+    attention_heads: 8
+    attention_features: 64
+    attention_multiplier: 4
+    use_stft: True
+    stft_num_fft: 1023
+    stft_hop_length: 256
+    stft_use_complex: True
+    patch_factor: 1
+    patch_blocks: 1
+    resnet_groups: 8
+    kernel_multiplier_downsample: 2
+    use_nearest_upsample: False
+    use_skip_scale: True
+    diffusion_type: v
+    diffusion_sigma_distribution:
+      _target_: audio_diffusion_pytorch.UniformDistribution
+
+datamodule:
+  _target_: main.module_base.Datamodule
+  dataset:
+    _target_: audio_data_pytorch.WAVDataset
+    recursive: True
+    sample_rate: ${sampling_rate}
+    transforms:
+      _target_: audio_data_pytorch.AllTransform
+      random_crop_size: ${length}
+      stereo: True
+  val_split: 0.0001
+  batch_size: 16
+  num_workers: 8
+  pin_memory: True
+
+callbacks:
+  rich_progress_bar:
+    _target_: pytorch_lightning.callbacks.RichProgressBar
+
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "valid_loss"   # name of the logged metric which determines when model is improving
+    save_top_k: 1           # save k best models (determined by above metric)
+    save_last: True         # additionaly always save model from last epoch
+    mode: "min"             # can be "max" or "min"
+    verbose: False
+    dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
+    filename: '{epoch:02d}-{valid_loss:.3f}'
+
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
+
+  audio_samples_logger:
+    _target_: main.module_base.SampleLogger
+    num_items: 3
+    channels: ${channels}
+    sampling_rate: ${sampling_rate}
+    length: ${length}
+    sampling_steps: [3, 10, 50, 100]
+    use_ema_model: False
+    diffusion_sampler:
+      _target_: audio_diffusion_pytorch.VSampler
+    diffusion_schedule:
+      _target_: audio_diffusion_pytorch.LinearSchedule
+
+loggers:
+  wandb:
+    _target_: pytorch_lightning.loggers.wandb.WandbLogger
+    project: ${oc.env:WANDB_PROJECT}
+    entity: ${oc.env:WANDB_ENTITY}
+    # offline: False  # set True to store all logs only locally
+    job_type: "train"
+    group: ""
+    save_dir: ${logs_dir}
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 0 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
+  precision: 32 # Precision used for tensors, default `32`
+  accelerator: null # `ddp` GPUs train individually and sync gradients, default `None`
+  min_epochs: 0
+  max_epochs: -1
+  enable_model_summary: False
+  log_every_n_steps: 1 # Logs metrics every N batches
+  check_val_every_n_epoch: null
+  val_check_interval: ${log_every_n_steps}
+  accumulate_grad_batches: 1
