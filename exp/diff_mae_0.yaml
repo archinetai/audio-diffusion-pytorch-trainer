@@ -9,7 +9,7 @@ channels: 2
 log_every_n_steps: 1000
 
 model:
-  _target_: main.module_diff_mae_3.Model
+  _target_: main.module_diff_mae.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
@@ -42,7 +42,7 @@ model:
 
 
 datamodule:
-  _target_: main.module_diff_mae_3.Datamodule
+  _target_: main.module_diff_mae.Datamodule
   dataset:
     _target_: audio_data_pytorch.WAVDataset
     recursive: True
@@ -75,7 +75,7 @@ callbacks:
     max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_diff_mae_3.SampleLogger
+    _target_: main.module_diff_mae.SampleLogger
     num_items: 3
     channels: ${channels}
     sampling_rate: ${sampling_rate}
