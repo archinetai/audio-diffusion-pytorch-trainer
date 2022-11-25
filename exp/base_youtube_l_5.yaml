@@ -1,0 +1,162 @@
+# @package _global_
+
+# 736M params
+
+sampling_rate: 48000
+length: 524288
+channels: 2
+log_every_n_steps: 1000
+
+model:
+  _target_: main.module_base.Model
+  lr: 1e-4
+  lr_beta1: 0.95
+  lr_beta2: 0.999
+  lr_eps: 1e-6
+  lr_weight_decay: 1e-3
+  ema_beta: 0.9999
+  ema_power: 0.7
+
+  model:
+    _target_: audio_diffusion_pytorch.AudioDiffusionModel
+    in_channels: ${channels}
+    channels: 320
+    patch_size: 32
+    resnet_groups: 8
+    kernel_multiplier_downsample: 2
+    multipliers: [1, 2, 4, 4, 4, 4, 4]
+    factors: [2, 2, 2, 2, 2, 2]
+    num_blocks: [2, 2, 2, 2, 2, 2]
+    attentions: [0, 0, 0, 0, 1, 1, 1]
+    attention_heads: 16
+    attention_features: 128
+    attention_multiplier: 4
+    use_nearest_upsample: False
+    use_skip_scale: True
+    diffusion_type: v
+    diffusion_sigma_distribution:
+      _target_: audio_diffusion_pytorch.UniformDistribution
+
+datamodule:
+  _target_: main.module_base.Datamodule
+  dataset:
+    _target_: audio_data_pytorch.YoutubeDataset
+    urls:
+      - https://www.youtube.com/watch?v=F1gIsoIVQG8 # 2h Kiasmos
+      - https://www.youtube.com/watch?v=KjgluLOMa0k # 1h Techno Mix
+      - https://www.youtube.com/watch?v=c_iRx2Un07k # 1h Kygo Piano
+      - https://www.youtube.com/watch?v=fWRISvgAygU # 2h Chillstep
+      - https://www.youtube.com/watch?v=aJoo79OwZEI # 1h Drum and Bass
+      - https://www.youtube.com/watch?v=vnKKNZLVh2Q # 1h French 79
+      - https://www.youtube.com/watch?v=5gcyzjCLH90 # 1h Andrew Langdon
+      - https://www.youtube.com/watch?v=FFfdyV8gnWk # 1h City of Gamers
+      - https://www.youtube.com/watch?v=eqhQwgO03OE # 1h Lofi beats
+      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
+      - https://www.youtube.com/watch?v=W_cu3mS5UU4 # 1h Cyberpunk 2077
+      - https://www.youtube.com/watch?v=0mAzlQwIPQI # 2h Dark Techno
+      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
+      - https://www.youtube.com/watch?v=Et0bFcvSImY # 1.5h Worakls, N'to , Joachim Pastor Mix
+      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
+      - https://www.youtube.com/watch?v=yGsGdhe0pj8 # Piano Solo, 2h
+      - https://www.youtube.com/watch?v=PJL_mVgT0Ao # Piano Solo 6h
+      - https://www.youtube.com/watch?v=GuCqvjcZTKM # Einaudi, 2h
+      - https://www.youtube.com/watch?v=FccYUW91an8 # Mendelssohn, 4h
+      - https://www.youtube.com/watch?v=CuU9q2VKOyc # Baroque, 4h
+      - https://www.youtube.com/watch?v=7JynrZsIrgo # Chopin, 3h
+      - https://www.youtube.com/watch?v=_ioc6sdgugo # Bach, 1.2h
+      - https://www.youtube.com/watch?v=EhO_MrRfftU # 4h Mix piano
+      - https://www.youtube.com/watch?v=c_iRx2Un07k # 1h Kygo
+      - https://www.youtube.com/watch?v=cGYyOY4XaFs # 2.5h Mix
+      - https://www.youtube.com/watch?v=GDnU6nbL1uQ # 1.5h Avicii
+      - https://www.youtube.com/watch?v=_dmOgDlWAkU # 1h Einaudi Piano Only
+      - https://www.youtube.com/watch?v=E7EOjkGVmyo # 1h Jacobs
+      - https://www.youtube.com/watch?v=5yJOf1JJ5b8 # 1h Relax
+      - https://www.youtube.com/watch?v=4fezP875xOQ # 4h Chopin
+      - https://www.youtube.com/watch?v=5-Y35hjZ06E # 4h Schubert
+      - https://www.youtube.com/watch?v=cMzyLBuFm4A # 2h Yiurma
+      - https://www.youtube.com/watch?v=7UtIg4dOe84 # 3h, Hans Zimmer
+      - https://www.youtube.com/watch?v=DWDZSqBHW5g # 2h, Ludovico Einaudi
+      - https://www.youtube.com/watch?v=aVMkvCTT_yg # 1.5h, Ludwig Göransson
+      - https://www.youtube.com/watch?v=Et0bFcvSImY # 1.5h, Worakls, N'to , Joachim Pastor Mix
+      - https://www.youtube.com/watch?v=gThS-KfIxOs # 2h, Beatles
+      - https://www.youtube.com/watch?v=3jgH5weXYwA # 3h, 2022 Mix
+      - https://www.youtube.com/watch?v=6JQm5aSjX6g # 2h, Bach Mix
+      - https://www.youtube.com/watch?v=k3WkJq478To # 2.5h Synthwave Mix
+      - https://www.youtube.com/watch?v=_3A4JW9RQWM # 1.5h Rock Mix
+      - https://www.youtube.com/watch?v=jgpJVI3tDbY # 3.5h Classical Mix
+      - https://www.youtube.com/watch?v=KjgluLOMa0k # 1h Techno Mix
+      - https://www.youtube.com/watch?v=zK3uaiVckEk # 1h Trap Mix
+      - https://www.youtube.com/watch?v=JQ1txLdu6qg # 1h Dubstep Mix
+      - https://www.youtube.com/watch?v=m8F8v2t5VcQ # 1.5h EDM
+      - https://www.youtube.com/watch?v=fSH9sWGzARA # 4h Techno Mix
+      - https://www.youtube.com/watch?v=VTVC4weBFUA # 10h Jazz
+      - https://www.youtube.com/watch?v=7sTlQiBtB1A # 11h Metal
+      - https://www.youtube.com/watch?v=26nsBfLXwSQ # 2h Rock
+      - https://www.youtube.com/watch?v=EbHxWU52ZH0 # 2.5h 90s
+      - https://www.youtube.com/watch?v=1L2RgI2G0qY # 2.4h 2000s
+      - https://www.youtube.com/watch?v=1L2RgI2G0qY # 2h 80s
+    root: ${data_dir}
+    crop_length: 60 # seconds crops
+    transforms:
+      _target_: audio_data_pytorch.AllTransform
+      source_rate: 48000
+      target_rate: ${sampling_rate}
+      random_crop_size: ${length}
+  val_split: 0.0005
+  batch_size: 8
+  num_workers: 8
+  pin_memory: True
+
+callbacks:
+  rich_progress_bar:
+    _target_: pytorch_lightning.callbacks.RichProgressBar
+
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "valid_loss"   # name of the logged metric which determines when model is improving
+    save_top_k: 1           # save k best models (determined by above metric)
+    save_last: True         # additionaly always save model from last epoch
+    mode: "min"             # can be "max" or "min"
+    verbose: False
+    dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
+    filename: '{epoch:02d}-{valid_loss:.3f}'
+
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
+
+  audio_samples_logger:
+    _target_: main.module_base.SampleLogger
+    num_items: 3
+    channels: ${channels}
+    sampling_rate: ${sampling_rate}
+    length: ${length}
+    sampling_steps: [3,5,10,25,50,100]
+    use_ema_model: True
+    diffusion_sampler:
+      _target_: audio_diffusion_pytorch.VSampler
+    diffusion_schedule:
+      _target_: audio_diffusion_pytorch.LinearSchedule
+
+loggers:
+  wandb:
+    _target_: pytorch_lightning.loggers.wandb.WandbLogger
+    project: ${oc.env:WANDB_PROJECT}
+    entity: ${oc.env:WANDB_ENTITY}
+    # offline: False  # set True to store all logs only locally
+    job_type: "train"
+    group: ""
+    save_dir: ${logs_dir}
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 0 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
+  precision: 32 # Precision used for tensors, default `32`
+  accelerator: null # `ddp` GPUs train individually and sync gradients, default `None`
+  min_epochs: 0
+  max_epochs: -1
+  enable_model_summary: False
+  log_every_n_steps: 1 # Logs metrics every N batches
+  check_val_every_n_epoch: null
+  val_check_interval: ${log_every_n_steps}
+  accumulate_grad_batches: 2

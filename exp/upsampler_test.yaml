@@ -22,8 +22,7 @@ model:
     factor_features: 128
     in_channels: ${channels}
     channels: 256
-    patch_factor: 32
-    patch_blocks: 1
+    patch_size: 32
     resnet_groups: 8
     kernel_multiplier_downsample: 2
     multipliers: [1, 2, 4, 4, 4, 4, 4]

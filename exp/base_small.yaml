@@ -22,7 +22,7 @@ model:
     _target_: audio_diffusion_pytorch.AudioDiffusionModel
     in_channels: ${channels}
     channels: 16
-    patch_factor: 8
+    patch_size: 8
     multipliers: [1, 4, 8, 8, 8, 16, 16, 16]
     factors: [2, 2, 2, 2, 2, 2, 2]
     num_blocks: [2, 2, 2, 2, 4, 4, 8]

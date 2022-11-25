@@ -3,11 +3,10 @@
 sampling_rate: 48000
 length: 262144
 channels: 2
-upsampler_factors: [4] # [24000Hz,...,375Hz]
 log_every_n_steps: 1000
 
 model:
-  _target_: main.module_upsampler.Model
+  _target_: main.module_base.Model
   lr: 1e-4
   lr_beta1: 0.95
   lr_beta2: 0.999
@@ -16,21 +15,19 @@ model:
   ema_beta: 0.995
   ema_power: 0.7
 
-  upsampler:
-    _target_: audio_diffusion_pytorch.AudioDiffusionUpsampler
-    factor: ${upsampler_factors}
+  model:
+    _target_: audio_diffusion_pytorch.AudioDiffusionModel
     in_channels: ${channels}
-    channels: 256
-    patch_factor: 32
-    patch_blocks: 1
+    channels: 128
+    patch_size: 16
     resnet_groups: 8
     kernel_multiplier_downsample: 2
-    multipliers: [1, 2, 4, 4, 4, 4, 4, 4]
-    factors: [2, 2, 2, 2, 2, 2, 2]
-    num_blocks: [2, 2, 2, 2, 2, 2, 2]
-    attentions: [0, 0, 0, 0, 1, 1, 1, 1]
-    attention_heads: 8
-    attention_features: 128
+    multipliers: [1, 2, 4, 4, 4, 4, 4]
+    factors: [2, 2, 2, 2, 2, 2]
+    num_blocks: [2, 2, 2, 2, 2, 2]
+    attentions: [0, 0, 0, 0, 1, 1, 1]
+    attention_heads: 16
+    attention_features: 64
     attention_multiplier: 4
     use_nearest_upsample: False
     use_skip_scale: True
@@ -39,7 +36,7 @@ model:
       _target_: audio_diffusion_pytorch.UniformDistribution
 
 datamodule:
-  _target_: main.module_upsampler.Datamodule
+  _target_: main.module_base.Datamodule
   dataset:
     _target_: audio_data_pytorch.WAVDataset
     recursive: True
@@ -48,21 +45,14 @@ datamodule:
       _target_: audio_data_pytorch.AllTransform
       random_crop_size: ${length}
       stereo: True
-      source_rate: ${sampling_rate}
-      target_rate: ${sampling_rate}
-
-  val_split: 0.0005
-  batch_size: 24
+  val_split: 0.0001
+  batch_size: 32
   num_workers: 8
   pin_memory: True
 
 callbacks:
   rich_progress_bar:
     _target_: pytorch_lightning.callbacks.RichProgressBar
-
-  model_summary:
-    _target_: pytorch_lightning.callbacks.RichModelSummary
-    max_depth: 2
 
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint
@@ -74,18 +64,18 @@ callbacks:
     dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
 
-  learning_rate_monitor:
-    _target_: pytorch_lightning.callbacks.LearningRateMonitor
+  model_summary:
+    _target_: pytorch_lightning.callbacks.RichModelSummary
+    max_depth: 2
 
   audio_samples_logger:
-    _target_: main.module_upsampler.SampleLogger
+    _target_: main.module_base.SampleLogger
     num_items: 3
-    factor: ${upsampler_factors}
     channels: ${channels}
     sampling_rate: ${sampling_rate}
     length: ${length}
-    use_ema_model: False
-    sampling_steps: [3,5,10,25,50]
+    sampling_steps: [3,5,10,25,50,100]
+    use_ema_model: True
     diffusion_sampler:
       _target_: audio_diffusion_pytorch.VSampler
     diffusion_schedule:
