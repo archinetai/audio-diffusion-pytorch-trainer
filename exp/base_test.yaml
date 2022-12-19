@@ -33,7 +33,6 @@ model:
     attention_multiplier: 2
     use_nearest_upsample: False
     use_skip_scale: True
-    use_magnitude_channels: True
     diffusion_sigma_distribution:
       _target_: audio_diffusion_pytorch.UniformDistribution
 
