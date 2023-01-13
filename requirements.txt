@@ -18,7 +18,7 @@ eng-to-ipa
 ema-pytorch
 py7zr
 
-audio-diffusion-pytorch
+audio-diffusion-pytorch==0.0.92
 audio-encoders-pytorch
 audio-data-pytorch
 quantizer-pytorch

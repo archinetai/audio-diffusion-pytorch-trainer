@@ -30,7 +30,6 @@ model:
     attention_heads: 8
     attention_features: 64
     attention_multiplier: 4
-    patch_blocks: 1
     resnet_groups: 8
     kernel_multiplier_downsample: 2
     use_nearest_upsample: False
